@@ -162,4 +162,140 @@ Refs: 主规约 §3.5.6 迁移路径
 
 ---
 
-## 
+## §4. 语言约定（强制）
+
+> **本项目 commit message 一律使用中文**。英文示例仅用于展示格式，不作为可接受的语言。
+
+### §4.1 适用范围
+
+| 字段 | 语言 |
+|---|---|
+| `<type>(<scope>):` 中的冒号后 **subject** | **必填中文**（动词开头） |
+| `<body>` 列表项 | **必填中文**（技术名词、英文专有名词、命令、文件名等可保留英文） |
+| `<footer>` `Refs` / `Closes` / `BREAKING CHANGE` 等标记 | 英文标记 + 中文描述 |
+
+### §4.2 强制要求
+
+1. **禁止英文 subject**：不允许 `feat(auth): add login`、`fix: bug`、`update code` 这类英文 subject。即使英文看起来更"地道"，也必须改成中文。
+2. **示例是格式示例，不是语言示例**：§1.5 给的 `feat(auth-admin): 实现 AdminUser DO 切基类` 是**唯一可接受的 subject 范式**——中文 subject + 英文类型标记 `feat/fix/chore/refactor/...`。
+3. **保留英文专有名词**：技术名词（`JWT` / `SSE` / `view_count` / `config.local.yaml`）、库名（`Gorm` / `Vite`）、命令（`npm install`）、文件名（`go.mod`）原样保留；其余文字必须中文。
+4. **审查 checklist 新增项**：
+   - [ ] subject 是中文（不是英文）？
+   - [ ] body 列表项是中文？
+
+### §4.3 反面错误示例（禁止）
+
+| 反面写法 | 为什么错 |
+|---|---|
+| `feat(web): implement Vue3 SPA` | 英文 subject,违反 §4.1 |
+| `feat(server): 实现 MVP backend` | "backend" 应保留英文名词，但其他地方用了中文夹杂,风格不统一 → 应改 "实现 MVP 后端" |
+| `feat: add login and registration and articles` | 英文 subject,且未达原子性 |
+| `feat(sql): 新增 schema` | subject 太模糊,不写清楚做了什么 |
+| `feat(auth-admin): 实现 AdminUser DO 切基类` | **这是正确的 ✅** |
+| `feat(auth-admin): 实现管理员 DO 切基类` | 正确 ✅(名词专有化处理) |
+
+---
+
+## §5. 自动化校验（强制）
+
+### §5.1 本地钩子（commit-msg）
+
+项目根目录 `.git/hooks/commit-msg`（或通过 `core.hooksPath` 指向 `.githooks/`）必须包含以下检查脚本，**不符合则拒绝提交**：
+
+```bash
+#!/usr/bin/env bash
+# .githooks/commit-msg
+# 校验 commit message:
+# 1) subject 必须以中文开头（首字符匹配 [\u4e00-\u9fa5]）
+# 2) subject 长度 ≤ 50
+# 3) 不允许英文 subject（即使带 type 前缀）
+set -e
+
+MSG_FILE="$1"
+SUBJECT=$(head -n1 "$MSG_FILE")
+
+# 1. 必须以中文开头
+if ! echo "$SUBJECT" | grep -qP '^\xE4[\x80-\xBF][\x80-\xBF]'; then
+  echo "❌ commit subject 必须以中文开头,当前: $SUBJECT"
+  echo "   示例: feat(web): 实现 Vue3 单页应用"
+  exit 1
+fi
+
+# 2. subject 长度 ≤ 50（不含 type 前缀的字符数）
+LEN=${#SUBJECT}
+if [ "$LEN" -gt 70 ]; then
+  echo "❌ commit subject 过长($LEN > 70): $SUBJECT"
+  exit 1
+fi
+
+# 3. 不允许 subject 全是英文（即使有 type: 前缀也算违规）
+# 已通过 (1) 检测,中文开头即合规
+```
+
+启用方式（在 `README` 或项目初始化文档中说明）：
+
+```bash
+git config core.hooksPath .githooks
+chmod +x .githooks/commit-msg
+```
+
+### §5.2 CI 校验（推荐）
+
+`.github/workflows/lint-commit.yml` 在 PR 时扫描 `git log origin/main..HEAD` 中每个 commit 的 subject，符合 §1 + §4 规范才放行。示例：
+
+```yaml
+name: lint-commit
+on:
+  pull_request:
+    branches: [main]
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: 校验 commit message 规范
+        run: |
+          bash .ci/lint-commit.sh origin/main HEAD
+```
+
+`bash .ci/lint-commit.sh` 实现参考 §5.1 同款逻辑。
+
+### §5.3 违反处罚
+
+| 严重程度 | 处理 |
+|---|---|
+| 本地 commit-msg 钩子拒绝 | 提交直接失败,**必须修正后重提** |
+| PR 阶段 CI 红 | **PR 直接打回**(同 §3 流程) |
+| 已合并到 main 后发现违规 | 责任人当日 `git rebase -i` + force push 重写历史 |
+
+---
+
+## §6. 事故案例库
+
+> 每次发生规范违反事故,**必须**追加到本节,作为后续新人 / AI 助手培训的反面教材。
+
+### §6.1 2026-08-27 zzdzz-blog-mvp 初始化（事故案例 #1）
+
+**现象**：模型（ZCode）在初始化 4 个 commit 时,虽然看到规约 §1.5 示例是 `feat(auth-admin): 实现 AdminUser DO 切基类`,但提交时全部写成英文 subject（`feat(web): implement Vue3 SPA`）。
+
+**根本原因**：
+1. **过度泛化训练数据中的"Conventional Commits 英文默认"惯性**,忽略了规约 §1.5 示例已经明确给出中文 subject 范式。
+2. **示例是格式示例 vs 语言示例的区分失败**——示例里的 `feat(auth-admin): 实现 AdminUser DO 切基类` 不仅是格式示例,也是语言范式,模型只读了前者。
+3. **复核机制缺失**——没有自动化钩子拦截,违规直接 push 到 main。
+
+**修复**：
+- 4 个英文 commit 全部 `git reset --mixed` + `commit --amend` 改成中文 subject,`git push -f` 覆盖远程。
+- 追加本节作为事故案例。
+- 追加 §4「语言约定」明确禁止英文 subject。
+- 追加 §5「自动化校验」用 `commit-msg` 钩子 + CI 强制约束。
+
+**教训**：
+- 任何规约示例 ≠ 模板填空,**必须先读规约正文确认语言/格式/约束,再读示例**。
+- 模型应主动询问"本项目 commit language 是中文还是英文",而**不是默认套用英文训练惯性**。
+- 涉及多语言规约时,必须有自动化校验,不能依赖人工 review。
+
+---
+
+**违反任一项的 PR 直接打回，要求修改 commit 信息或拆分 commit 后再 review。 

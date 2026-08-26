@@ -1,0 +1,64 @@
+#!/usr/bin/env bash
+# commit-msg hook: enforce zh-CN commit message rules per doc/git-commit-standards.md §4 §5
+# Reject commit if subject is not Chinese, too long, or empty body for non-trivial commits.
+
+set -e
+
+MSG_FILE="$1"
+SUBJECT=$(head -n1 "$MSG_FILE")
+
+# ── 1. subject 必须以中文字符开头 (U+4E00 ~ U+9FFF 范围) ──────────────────
+# 通过把首字节流做 hex 比对实现:中文字符 UTF-8 编码首字节通常在 E4~E9
+FIRST_CHAR_ASCII=$(echo -n "$SUBJECT" | head -c 1 | od -An -tx1 | tr -d ' \n')
+if ! echo "$FIRST_CHAR_ASCII" | grep -qE '^(e[4-9]|f[0-9])'; then
+  # 双保险:用 grep -P 匹配完整中文字符
+  if ! echo "$SUBJECT" | grep -qP '[\x{4e00}-\x{9fff}]'; then
+    echo "❌ commit subject 必须包含中文,当前首行: $SUBJECT"
+    echo "   示例: feat(web): 实现 Vue3 单页应用"
+    exit 1
+  fi
+fi
+
+# ── 2. subject 长度 ≤ 50 (中文字符按 2 字节算偏严格,这里直接按字节算) ────
+LEN=${#SUBJECT}
+if [ "$LEN" -gt 70 ]; then
+  echo "❌ commit subject 过长($LEN > 70): $SUBJECT"
+  exit 1
+fi
+
+# ── 3. type 必须在前 11 个固定取值内 ────────────────────────────────────
+TYPE=$(echo "$SUBJECT" | sed -E 's/^([a-z]+)\(.*/\1/; s/^([a-z]+):.*/\1/' | head -c 20)
+case "$TYPE" in
+  feat|fix|docs|style|refactor|perf|test|chore|build|ci|revert)
+    ;;
+  *)
+    echo "❌ commit type 必须是 feat/fix/docs/style/refactor/perf/test/chore/build/ci/revert 之一"
+    echo "   当前: $TYPE"
+    exit 1
+    ;;
+esac
+
+# ── 4. 至少 subject 不能只包含 type 冒号 ────────────────────────────────
+REST=$(echo "$SUBJECT" | sed -E 's/^[a-z]+(\([^)]+\))?:\s*//')
+if [ -z "$(echo "$REST" | tr -d ' \t')" ]; then
+  echo "❌ commit subject 不能为空(只有 type)"
+  exit 1
+fi
+
+# ── 5. body 不能为空(对非 chore/docs 类型的提交) ─────────────────────────
+TYPE_ONLY=$(echo "$SUBJECT" | cut -d: -f1 | sed 's/(.*//')
+case "$TYPE_ONLY" in
+  chore|docs|style)
+    # 这三类允许只有 subject
+    ;;
+  *)
+    BODY=$(tail -n +2 "$MSG_FILE" | sed '/^$/d' | head -n1)
+    if [ -z "$BODY" ]; then
+      echo "❌ $TYPE_ONLY 类型的 commit 必须有 body 说明改动原因/影响"
+      exit 1
+    fi
+    ;;
+esac
+
+echo "✅ commit message 通过校验: $SUBJECT"
+exit 0

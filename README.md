@@ -128,6 +128,16 @@ Vite dev server 已经把 `/api/*` 反代到 `http://localhost:8080`。
 
 打开浏览器访问 http://localhost:5173，登录页已预填 `admin / 123456`。
 
+### 6. 启用 commit message 校验（推荐）
+
+项目使用中文 commit message（详见 `doc/git-commit-standards.md` §4），本地有 `commit-msg` 钩子做强制校验：
+
+```bash
+git config core.hooksPath .githooks
+```
+
+启用后，英文 subject / 非法 type / 缺 body 等都会被拒绝。详见 `.githooks/commit-msg` 和 §5。
+
 ## API 速览
 
 | 方法 | 路径 | 鉴权 | 说明 |
