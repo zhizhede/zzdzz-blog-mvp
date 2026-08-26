@@ -1,0 +1,44 @@
+# ─────────────── IDE / Editor ───────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# ─────────────── Go ───────────────
+server/bin/
+server/server.exe
+server/server
+*.test
+*.out
+coverage.out
+coverage.html
+
+# ─────────────── Node / Vue ───────────────
+web/node_modules/
+web/dist/
+web/.vite/
+web/.cache/
+web/.env
+web/.env.local
+web/*.local
+
+# ─────────────── Logs ───────────────
+*.log
+logs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# ─────────────── Secrets / Config ───────────────
+# 不要把数据库密码 / API key 之类的本地配置提交
+**/.env
+!**/.env.example
+**/config.local.yaml
+**/config.local.yml
+
+# ─────────────── Build artifacts ───────────────
+web/src/assets/
+*.tsbuildinfo
