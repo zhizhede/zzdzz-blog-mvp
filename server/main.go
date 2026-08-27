@@ -20,8 +20,10 @@ func main() {
 		}
 		dir := filepath.Dir(exe)
 		candidates := []string{
+			filepath.Join(dir, "config", "config.production.yaml"),
 			filepath.Join(dir, "config", "config.local.yaml"),
 			filepath.Join(dir, "config", "config.yaml"),
+			"config/config.production.yaml",
 			"config/config.local.yaml",
 			"config/config.yaml",
 		}

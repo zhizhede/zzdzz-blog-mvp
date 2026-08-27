@@ -16,6 +16,22 @@ func New(db *gorm.DB, cfg *config.Config) *gin.Engine {
 	r := gin.New()
 	r.Use(gin.Logger(), gin.Recovery())
 
+	// 前端静态文件 (web/dist 在二进制同级目录)
+	r.Static("/assets", "./web/assets")
+	r.StaticFile("/favicon.svg", "./web/favicon.svg")
+	r.StaticFile("/icons.svg", "./web/icons.svg")
+	r.GET("/", func(c *gin.Context) {
+		c.File("./web/index.html")
+	})
+	// SPA fallback: 非 /api 的路径都返回 index.html,让前端路由接管
+	r.NoRoute(func(c *gin.Context) {
+		if len(c.Request.URL.Path) >= 5 && c.Request.URL.Path[:5] == "/api/" {
+			c.JSON(404, gin.H{"code": 404, "message": "route not found"})
+			return
+		}
+		c.File("./web/index.html")
+	})
+
 	corsCfg := cors.Config{
 		AllowOrigins:     cfg.CORS.AllowOrigins,
 		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"},
