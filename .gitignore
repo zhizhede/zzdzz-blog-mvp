@@ -38,6 +38,11 @@ pnpm-debug.log*
 !**/.env.example
 **/config.local.yaml
 **/config.local.yml
+# 生产/预发环境的真实配置不进仓库 (本地可保留,服务器另传)
+server/config/*.production.yaml
+server/config/*.staging.yaml
+**/*.production.yaml
+**/*.staging.yaml
 
 # ─────────────── Build artifacts ───────────────
 web/src/assets/
