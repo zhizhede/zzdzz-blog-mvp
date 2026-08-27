@@ -1,0 +1,66 @@
+version: "3.9"
+
+# 后端 + Postgres 一键起 (前端走宝塔 Nginx)
+# 路径: /www/wwwroot/blog-server/
+# 用法:
+#   cp .env.example .env && vim .env
+#   docker compose --env-file .env up -d --build
+#   docker compose --env-file .env logs -f backend
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: zzdzz-pg
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER:     ${PG_USER:-postgres}
+      POSTGRES_PASSWORD: ${PG_PASSWORD}
+      POSTGRES_DB:       ${PG_DB:-zzdzz_blog}
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+      - ./migrations:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${PG_USER:-postgres}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - blog-net
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        - VERSION=${VERSION:-latest}
+    image: zzdzz/backend:${VERSION:-latest}
+    container_name: zzdzz-backend
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      ZZDZZ_DATABASE_HOST:     postgres
+      ZZDZZ_DATABASE_PORT:     "5432"
+      ZZDZZ_DATABASE_USER:     ${PG_USER:-postgres}
+      ZZDZZ_DATABASE_PASSWORD: ${PG_PASSWORD}
+      ZZDZZ_DATABASE_DBNAME:   ${PG_DB:-zzdzz_blog}
+      ZZDZZ_DATABASE_SSLMODE:  disable
+      ZZDZZ_JWT_SECRET:        ${JWT_SECRET}
+      ZZDZZ_AI_BASE_URL:       ${AI_BASE_URL}
+      ZZDZZ_AI_API_KEY:        ${AI_API_KEY}
+      ZZDZZ_AI_MODEL:          ${AI_MODEL:-MiniMax-M3}
+      ZZDZZ_AI_ENABLED:        ${AI_ENABLED:-true}
+      ZZDZZ_SERVER_MODE:       release
+    ports:
+      - "127.0.0.1:8080:8080"   # 仅本机,Nginx 反代访问
+    networks:
+      - blog-net
+
+networks:
+  blog-net:
+    driver: bridge
+
+volumes:
+  pg_data:
+    driver: local
