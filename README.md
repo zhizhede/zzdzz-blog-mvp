@@ -9,7 +9,7 @@
 - 登录鉴权（JWT，30 天过期）
 - 文章 CRUD（支持分类、搜索、分页、阅读量）
 - 文章分类 CRUD
-- AI 对话（OpenAI 兼容协议，默认接入 MiniMax-M3，支持流式 SSE）
+- AI 对话（OpenAI 兼容协议，默认接入 MiniMax-M3，支持流式 SSE，会话持久化）
 - 单 SPA：后台管理 + 公开博客前台同站
 
 ## 目录结构
@@ -150,7 +150,11 @@ git config core.hooksPath .githooks
 | GET | `/api/v1/articles` | - | 文章分页 (`page`/`size`/`category_id`/`q`) |
 | GET | `/api/v1/articles/:id` | - | 文章详情（自动 +1 阅读量）|
 | POST/PUT/DELETE | `/api/v1/articles[/:id]` | ✅ | 文章 CRUD |
-| POST | `/api/v1/ai/chat` | ✅ | AI 对话（支持 `stream:true` 走 SSE）|
+| POST | `/api/v1/ai/chat` | ✅ | AI 对话（支持 `stream:true` 走 SSE，无状态旧接口）|
+| GET/POST | `/api/v1/ai/conversations` | ✅ | 会话列表 / 新建会话 |
+| PATCH/DELETE | `/api/v1/ai/conversations/:id` | ✅ | 重命名 / 删除会话 |
+| GET | `/api/v1/ai/conversations/:id/messages` | ✅ | 拉某会话的历史消息 |
+| POST | `/api/v1/ai/conversations/:id/messages` | ✅ | 发消息（流式 + 持久化，详见 `doc/ai-conversation.md`）|
 
 ## 部署
 
