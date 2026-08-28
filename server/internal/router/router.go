@@ -49,7 +49,8 @@ func New(db *gorm.DB, cfg *config.Config) *gin.Engine {
 	cat := handler.NewCategoryHandler(catSvc)
 	artSvc := service.NewArticleService(db)
 	art := handler.NewArticleHandler(artSvc)
-	ai := handler.NewAIHandler(&cfg.AI)
+	aiSvc := service.NewAIService(db)
+	ai := handler.NewAIHandler(&cfg.AI, aiSvc)
 
 	api := r.Group("/api/v1")
 	{
@@ -86,6 +87,15 @@ func New(db *gorm.DB, cfg *config.Config) *gin.Engine {
 		aiGroup := api.Group("/ai")
 		aiGroup.Use(handler.RequireAuth(&cfg.JWT))
 		{
+			// 持久化版会话管理
+			aiGroup.GET("/conversations", ai.ListConversations)
+			aiGroup.POST("/conversations", ai.CreateConversation)
+			aiGroup.PATCH("/conversations/:id", ai.RenameConversation)
+			aiGroup.DELETE("/conversations/:id", ai.DeleteConversation)
+			aiGroup.GET("/conversations/:id/messages", ai.ListMessages)
+			aiGroup.POST("/conversations/:id/messages", ai.SendMessage)
+
+			// 兼容旧版（无状态）
 			aiGroup.POST("/chat", ai.Chat)
 		}
 	}
