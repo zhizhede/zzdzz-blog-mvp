@@ -51,6 +51,25 @@ func (h *AuthHandler) Me(c *gin.Context) {
 	response.OK(c, gin.H{"id": uid, "username": uname})
 }
 
+// userIDOf 从 gin.Context 取 user_id,支持 uint64 / float64(JSON 解码) / int 三种形态。
+func userIDOf(c *gin.Context) uint64 {
+	v, ok := c.Get("user_id")
+	if !ok {
+		return 0
+	}
+	switch x := v.(type) {
+	case uint64:
+		return x
+	case int:
+		return uint64(x)
+	case int64:
+		return uint64(x)
+	case float64:
+		return uint64(x)
+	}
+	return 0
+}
+
 func RequireAuth(cfg *config.JWTConfig) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		h := c.GetHeader("Authorization")
