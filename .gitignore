@@ -38,6 +38,9 @@ pnpm-debug.log*
 !**/.env.example
 **/config.local.yaml
 **/config.local.yml
+# 本地 SSH 私钥 (按服务器命名)
+keys/
+**/keys/
 # 生产/预发环境的真实配置不进仓库 (本地可保留,服务器另传)
 server/config/*.production.yaml
 server/config/*.staging.yaml
@@ -47,3 +50,6 @@ server/config/*.staging.yaml
 # ─────────────── Build artifacts ───────────────
 web/src/assets/
 *.tsbuildinfo
+# 部署产物 (二进制 + dist),只在本地 staging 用,不入库
+deploy/release/blog-server/blog-server
+deploy/release/blog-server/web/
