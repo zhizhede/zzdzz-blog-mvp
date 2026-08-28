@@ -12,6 +12,9 @@ export const authApi = {
   me: () => http.get<any, ApiResponse<{ id: number; username: string }>>('/auth/me'),
 }
 
+export * from './ai'
+export { aiApi } from './ai'
+
 export interface Category {
   id: number
   name: string
