@@ -35,3 +35,21 @@ type Article struct {
 }
 
 func (Article) TableName() string { return "articles" }
+
+type AIConversation struct {
+	Base
+	UserID uint64 `gorm:"index;not null" json:"user_id"`
+	Title  string `gorm:"size:100;not null;default:'未命名会话'" json:"title"`
+}
+
+func (AIConversation) TableName() string { return "ai_conversations" }
+
+type AIMessage struct {
+	ID             uint64    `gorm:"primaryKey" json:"id"`
+	ConversationID uint64    `gorm:"index;not null" json:"conversation_id"`
+	Role           string    `gorm:"size:16;not null" json:"role"`
+	Content        string    `gorm:"type:text;not null;default:''" json:"content"`
+	CreatedAt      time.Time `json:"created_at"`
+}
+
+func (AIMessage) TableName() string { return "ai_messages" }
