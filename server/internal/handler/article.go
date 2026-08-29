@@ -23,6 +23,14 @@ func mustBool(c *gin.Context, key string) bool {
 	return b
 }
 
+// actorOf 从 context 构造 Actor. 匿名访问时 user_id 为 0, is_admin 为 false.
+func actorOf(c *gin.Context) service.Actor {
+	return service.Actor{
+		UserID:  userIDOf(c),
+		IsAdmin: mustBool(c, "is_admin"),
+	}
+}
+
 type ArticleHandler struct {
 	svc *service.ArticleService
 }
@@ -45,18 +53,24 @@ func (h *ArticleHandler) List(c *gin.Context) {
 	size, _ := strconv.Atoi(c.DefaultQuery("size", "10"))
 	catID, _ := strconv.ParseUint(c.Query("category_id"), 10, 64)
 	keyword := c.Query("q")
+	authorID, _ := strconv.ParseUint(c.Query("author_id"), 10, 64)
 
-	// 仅 admin 看到全部可见性; 普通登录用户与匿名一致, 只看 public
-	_, includeAll := c.Get("is_admin")
-	includeAll = includeAll && mustBool(c, "is_admin")
-
-	res, err := h.svc.List(service.ArticleListQuery{
+	isAdmin := mustBool(c, "is_admin")
+	q := service.ArticleListQuery{
 		Page:       page,
 		PageSize:   size,
 		CategoryID: catID,
 		Keyword:    keyword,
-		IncludeAll: includeAll,
-	})
+		IncludeAll: isAdmin,
+	}
+
+	// 优先级 1: 显式传 author_id(= 自己), 用于"我的笔记"; 必须登录, 否则越权
+	if uid := userIDOf(c); uid > 0 && authorID == uid {
+		q.AuthorID = &uid
+		q.IncludeAll = false // 由 AuthorID 分支接管可见性过滤
+	}
+
+	res, err := h.svc.List(q)
 	if err != nil {
 		response.ServerError(c, err.Error())
 		return
@@ -70,15 +84,19 @@ func (h *ArticleHandler) Get(c *gin.Context) {
 		response.BadRequest(c, "invalid id")
 		return
 	}
-	// 鉴权过且是 admin → 走 GetForAdmin, 可读 private/draft; 普通登录用户与匿名一致
 	isAdmin := mustBool(c, "is_admin")
+	uid := userIDOf(c)
 	var (
 		a    *model.Article
 		serr error
 	)
-	if isAdmin {
+	switch {
+	case isAdmin:
 		a, serr = h.svc.GetForAdmin(id)
-	} else {
+	case uid > 0:
+		// 登录非 admin: 走 GetForOwner, 让作者能看到自己的 private/draft
+		a, serr = h.svc.GetForOwner(id, uid)
+	default:
 		a, serr = h.svc.Get(id)
 	}
 	if serr != nil {
@@ -98,14 +116,19 @@ func (h *ArticleHandler) Create(c *gin.Context) {
 		response.BadRequest(c, err.Error())
 		return
 	}
-	a, err := h.svc.Create(service.ArticleInput{
+	in := service.ArticleInput{
 		Title:      req.Title,
 		Slug:       req.Slug,
 		Summary:    req.Summary,
 		Content:    req.Content,
 		CategoryID: req.CategoryID,
 		Visibility: req.Visibility,
-	})
+	}
+	// 由 handler 从 context 注入 author_id, 防止请求体伪造作者
+	if uid := userIDOf(c); uid > 0 {
+		in.AuthorID = &uid
+	}
+	a, err := h.svc.Create(in)
 	if err != nil {
 		if errors.Is(err, service.ErrCategoryNotFoundArt) {
 			response.Fail(c, 404, 4004, "category not found")
@@ -135,13 +158,16 @@ func (h *ArticleHandler) Update(c *gin.Context) {
 		Content:    req.Content,
 		CategoryID: req.CategoryID,
 		Visibility: req.Visibility,
-	})
+		// Update 不允许改 author_id, service 忽略此字段
+	}, actorOf(c))
 	if err != nil {
 		switch {
 		case errors.Is(err, service.ErrArticleNotFound):
 			response.Fail(c, 404, 4004, "article not found")
 		case errors.Is(err, service.ErrCategoryNotFoundArt):
 			response.Fail(c, 404, 4004, "category not found")
+		case errors.Is(err, service.ErrArticleNotOwned):
+			response.Fail(c, 403, 4003, "not article owner")
 		default:
 			response.ServerError(c, err.Error())
 		}
@@ -156,12 +182,15 @@ func (h *ArticleHandler) Delete(c *gin.Context) {
 		response.BadRequest(c, "invalid id")
 		return
 	}
-	if err := h.svc.Delete(id); err != nil {
-		if errors.Is(err, service.ErrArticleNotFound) {
+	if err := h.svc.Delete(id, actorOf(c)); err != nil {
+		switch {
+		case errors.Is(err, service.ErrArticleNotFound):
 			response.Fail(c, 404, 4004, "article not found")
-			return
+		case errors.Is(err, service.ErrArticleNotOwned):
+			response.Fail(c, 403, 4003, "not article owner")
+		default:
+			response.ServerError(c, err.Error())
 		}
-		response.ServerError(c, err.Error())
 		return
 	}
 	response.OK(c, nil)
