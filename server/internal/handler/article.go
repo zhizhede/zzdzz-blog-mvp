@@ -6,6 +6,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
+	"zzdzz-blog/server/internal/model"
 	"zzdzz-blog/server/internal/service"
 	"zzdzz-blog/server/pkg/response"
 )
@@ -24,6 +25,7 @@ type articleReq struct {
 	Summary    string `json:"summary" binding:"max=500"`
 	Content    string `json:"content" binding:"required"`
 	CategoryID uint64 `json:"category_id" binding:"required"`
+	Visibility string `json:"visibility" binding:"omitempty,oneof=public private draft"`
 }
 
 func (h *ArticleHandler) List(c *gin.Context) {
@@ -32,11 +34,15 @@ func (h *ArticleHandler) List(c *gin.Context) {
 	catID, _ := strconv.ParseUint(c.Query("category_id"), 10, 64)
 	keyword := c.Query("q")
 
+	// 鉴权过的请求 (admin) → 看到全部可见性, 用于后台列表
+	_, includeAll := c.Get("user_id")
+
 	res, err := h.svc.List(service.ArticleListQuery{
 		Page:       page,
 		PageSize:   size,
 		CategoryID: catID,
 		Keyword:    keyword,
+		IncludeAll: includeAll,
 	})
 	if err != nil {
 		response.ServerError(c, err.Error())
@@ -51,13 +57,23 @@ func (h *ArticleHandler) Get(c *gin.Context) {
 		response.BadRequest(c, "invalid id")
 		return
 	}
-	a, err := h.svc.Get(id)
-	if err != nil {
-		if errors.Is(err, service.ErrArticleNotFound) {
+	// 鉴权过的请求走 GetForAdmin, 可读 private/draft
+	_, isAdmin := c.Get("user_id")
+	var (
+		a    *model.Article
+		serr error
+	)
+	if isAdmin {
+		a, serr = h.svc.GetForAdmin(id)
+	} else {
+		a, serr = h.svc.Get(id)
+	}
+	if serr != nil {
+		if errors.Is(serr, service.ErrArticleNotFound) {
 			response.Fail(c, 404, 4004, "article not found")
 			return
 		}
-		response.ServerError(c, err.Error())
+		response.ServerError(c, serr.Error())
 		return
 	}
 	response.OK(c, a)
@@ -75,6 +91,7 @@ func (h *ArticleHandler) Create(c *gin.Context) {
 		Summary:    req.Summary,
 		Content:    req.Content,
 		CategoryID: req.CategoryID,
+		Visibility: req.Visibility,
 	})
 	if err != nil {
 		if errors.Is(err, service.ErrCategoryNotFoundArt) {
@@ -104,6 +121,7 @@ func (h *ArticleHandler) Update(c *gin.Context) {
 		Summary:    req.Summary,
 		Content:    req.Content,
 		CategoryID: req.CategoryID,
+		Visibility: req.Visibility,
 	})
 	if err != nil {
 		switch {
