@@ -77,8 +77,9 @@ func New(db *gorm.DB, cfg *config.Config) *gin.Engine {
 
 		articles := api.Group("/articles")
 		{
-			articles.GET("", art.List)
-			articles.GET("/:id", art.Get)
+			// List / Get 走 OptionalAuth: 公开可读, 但带 token 时后端可识别为 admin 看到全部可见性
+			articles.GET("", handler.OptionalAuth(&cfg.JWT), art.List)
+			articles.GET("/:id", handler.OptionalAuth(&cfg.JWT), art.Get)
 			articles.POST("", handler.RequireAuth(&cfg.JWT), art.Create)
 			articles.PUT("/:id", handler.RequireAuth(&cfg.JWT), art.Update)
 			articles.DELETE("/:id", handler.RequireAuth(&cfg.JWT), art.Delete)
