@@ -35,6 +35,19 @@ const fetchCategories = async () => {
 const categoryName = (id: number) =>
   categories.value.find((c) => c.id === id)?.name || '-'
 
+const visibilityTag = (v: string) => {
+  switch (v) {
+    case 'public':
+      return { type: 'success' as const, label: '公开' }
+    case 'private':
+      return { type: 'info' as const, label: '仅自己' }
+    case 'draft':
+      return { type: 'warning' as const, label: '草稿' }
+    default:
+      return { type: 'info' as const, label: v || '公开' }
+  }
+}
+
 const handleDelete = async (row: Article) => {
   await ElMessageBox.confirm(`确认删除「${row.title}」?`, '提示', { type: 'warning' })
   await articleApi.remove(row.id)
@@ -77,6 +90,13 @@ onMounted(() => {
         <el-table-column prop="title" label="标题" min-width="220" />
         <el-table-column label="分类" width="100">
           <template #default="{ row }">{{ categoryName(row.category_id) }}</template>
+        </el-table-column>
+        <el-table-column label="可见性" width="100">
+          <template #default="{ row }">
+            <el-tag :type="visibilityTag(row.visibility).type" size="small">
+              {{ visibilityTag(row.visibility).label }}
+            </el-tag>
+          </template>
         </el-table-column>
         <el-table-column prop="view_count" label="阅读" width="80" />
         <el-table-column prop="created_at" label="创建时间" width="170">
