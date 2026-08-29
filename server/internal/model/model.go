@@ -32,6 +32,8 @@ type Article struct {
 	Content    string `gorm:"type:text;not null" json:"content"`
 	CategoryID uint64 `gorm:"index;not null" json:"category_id"`
 	ViewCount  int    `gorm:"default:0" json:"view_count"`
+	// Visibility: public(默认) / private(仅自己) / draft(草稿, 连 URL 都404)
+	Visibility string `gorm:"size:16;not null;default:public" json:"visibility"`
 }
 
 func (Article) TableName() string { return "articles" }
