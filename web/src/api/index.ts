@@ -10,6 +10,11 @@ export const authApi = {
   login: (username: string, password: string) =>
     http.post<any, ApiResponse<LoginResult>>('/auth/login', { username, password }),
   me: () => http.get<any, ApiResponse<{ id: number; username: string; is_admin: boolean }>>('/auth/me'),
+  changeOwnPassword: (oldPassword: string, newPassword: string) =>
+    http.put<any, ApiResponse<null>>('/auth/password', {
+      old_password: oldPassword,
+      new_password: newPassword,
+    }),
 }
 
 export * from './ai'
@@ -45,6 +50,7 @@ export interface Article {
   created_at: string
   updated_at: string
   visibility: 'public' | 'private' | 'draft'
+  author_id: number | null
 }
 
 export interface ArticleListResult {
@@ -55,19 +61,26 @@ export interface ArticleListResult {
 }
 
 export const articleApi = {
-  list: (params: { page?: number; size?: number; category_id?: number; q?: string }) =>
-    http.get<any, ApiResponse<ArticleListResult>>('/articles', { params }),
+  list: (params: {
+    page?: number
+    size?: number
+    category_id?: number
+    q?: string
+    author_id?: number
+  }) => http.get<any, ApiResponse<ArticleListResult>>('/articles', { params }),
   get: (id: number) => http.get<any, ApiResponse<Article>>(`/articles/${id}`),
   create: (
-    data: Omit<Article, 'id' | 'view_count' | 'created_at' | 'updated_at' | 'visibility'> & {
-      visibility?: Article['visibility']
-    },
+    data: Omit<
+      Article,
+      'id' | 'view_count' | 'created_at' | 'updated_at' | 'visibility' | 'author_id'
+    > & { visibility?: Article['visibility'] },
   ) => http.post<any, ApiResponse<Article>>('/articles', data),
   update: (
     id: number,
-    data: Omit<Article, 'id' | 'view_count' | 'created_at' | 'updated_at' | 'visibility'> & {
-      visibility?: Article['visibility']
-    },
+    data: Omit<
+      Article,
+      'id' | 'view_count' | 'created_at' | 'updated_at' | 'visibility' | 'author_id'
+    > & { visibility?: Article['visibility'] },
   ) => http.put<any, ApiResponse<Article>>(`/articles/${id}`, data),
   remove: (id: number) => http.delete<any, ApiResponse<null>>(`/articles/${id}`),
 }
