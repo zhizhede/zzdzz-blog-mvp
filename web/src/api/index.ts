@@ -41,6 +41,7 @@ export interface Article {
   view_count: number
   created_at: string
   updated_at: string
+  visibility: 'public' | 'private' | 'draft'
 }
 
 export interface ArticleListResult {
@@ -54,9 +55,16 @@ export const articleApi = {
   list: (params: { page?: number; size?: number; category_id?: number; q?: string }) =>
     http.get<any, ApiResponse<ArticleListResult>>('/articles', { params }),
   get: (id: number) => http.get<any, ApiResponse<Article>>(`/articles/${id}`),
-  create: (data: Omit<Article, 'id' | 'view_count' | 'created_at' | 'updated_at'>) =>
-    http.post<any, ApiResponse<Article>>('/articles', data),
-  update: (id: number, data: Omit<Article, 'id' | 'view_count' | 'created_at' | 'updated_at'>) =>
-    http.put<any, ApiResponse<Article>>(`/articles/${id}`, data),
+  create: (
+    data: Omit<Article, 'id' | 'view_count' | 'created_at' | 'updated_at' | 'visibility'> & {
+      visibility?: Article['visibility']
+    },
+  ) => http.post<any, ApiResponse<Article>>('/articles', data),
+  update: (
+    id: number,
+    data: Omit<Article, 'id' | 'view_count' | 'created_at' | 'updated_at' | 'visibility'> & {
+      visibility?: Article['visibility']
+    },
+  ) => http.put<any, ApiResponse<Article>>(`/articles/${id}`, data),
   remove: (id: number) => http.delete<any, ApiResponse<null>>(`/articles/${id}`),
 }
