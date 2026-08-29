@@ -53,3 +53,13 @@ web/src/assets/
 # 部署产物 (二进制 + dist),只在本地 staging 用,不入库
 deploy/release/blog-server/blog-server
 deploy/release/blog-server/web/
+
+# ─────────────── Temporary / Debug scripts ───────────────
+# 一次性排查 / 调试脚本(ssh inspect、tcpdump 解 pcap、SSE 字节探针等)
+# 命名约定:tests/_tmp/ 下,文件名带 _tmp / inspect / probe / patch 前缀
+# 正式测试用例应放 tests/<feature>/ 独立目录,通过 PR review 进入仓库
+tests/_tmp/
+tests/**/_tmp/
+tests/**/inspect_*.py
+tests/**/probe_*.js
+tests/**/patch_*.py
