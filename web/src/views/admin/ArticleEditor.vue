@@ -17,6 +17,7 @@ const form = ref({
   summary: '',
   content: '',
   category_id: 0 as number,
+  visibility: 'public' as 'public' | 'private' | 'draft',
 })
 const saving = ref(false)
 
@@ -34,6 +35,7 @@ const fetchArticle = async () => {
     summary: res.data.summary,
     content: res.data.content,
     category_id: res.data.category_id,
+    visibility: res.data.visibility || 'public',
   }
 }
 
@@ -91,6 +93,16 @@ onMounted(async () => {
             <el-option v-for="c in categories" :key="c.id" :label="c.name" :value="c.id" />
           </el-select>
         </el-form-item>
+        <el-form-item label="可见性">
+          <el-radio-group v-model="form.visibility">
+            <el-radio-button value="public">公开</el-radio-button>
+            <el-radio-button value="private">仅自己</el-radio-button>
+            <el-radio-button value="draft">草稿</el-radio-button>
+          </el-radio-group>
+          <span class="visibility-hint">
+            {{ form.visibility === 'public' ? '所有人都能看到' : form.visibility === 'private' ? '仅自己(凭 token)能看到,游客 404' : '草稿,连自己访问 URL 都 404' }}
+          </span>
+        </el-form-item>
         <el-form-item label="正文" required>
           <el-input
             v-model="form.content"
@@ -108,4 +120,5 @@ onMounted(async () => {
 <style scoped>
 .toolbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
 .toolbar h2 { margin: 0; }
+.visibility-hint { margin-left: 12px; color: #909399; font-size: 13px; }
 </style>
