@@ -104,6 +104,10 @@ const send = async () => {
   const aiMsg: Msg = { role: 'assistant', content: '', pending: true }
   messages.value.push(aiMsg)
   await scrollToBottom()
+  // 拿到 assistant 气泡的 DOM 节点(绕过 Vue 反应式,直接写 textContent)
+  let bubbleEl: HTMLElement | null = null
+  await nextTick()
+  bubbleEl = document.querySelector<HTMLElement>('.msg.assistant:last-child .bubble')
   sending.value = true
 
   try {
@@ -142,8 +146,15 @@ const send = async () => {
           const obj = JSON.parse(payload)
           if (obj.error) {
             aiMsg.content = `错误: ${obj.error}`
+            if (bubbleEl && bubbleEl.firstChild) {
+              bubbleEl.firstChild.nodeValue = aiMsg.content
+            }
           } else if (obj.delta) {
-            aiMsg.content += obj.delta
+            // 绕过 Vue:直接操作 bubble 内的第一个文本节点,避免覆盖 cursor span
+            // 不写 aiMsg.content,避免触发 Vue 重渲染覆盖 firstChild 引用
+            if (bubbleEl && bubbleEl.firstChild) {
+              bubbleEl.firstChild.nodeValue += obj.delta
+            }
           }
         } catch {}
       }
