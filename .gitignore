@@ -54,6 +54,10 @@ web/src/assets/
 deploy/release/blog-server/blog-server
 deploy/release/blog-server/web/
 
+# ─────────────── Agent / tooling local state ───────────────
+# zcode CLI 本地状态(规划目录等),不入库
+.zcode/
+
 # ─────────────── Temporary / Debug scripts ───────────────
 # 一次性排查 / 调试脚本(ssh inspect、tcpdump 解 pcap、SSE 字节探针等)
 # 命名约定:tests/_tmp/ 下,文件名带 _tmp / inspect / probe / patch 前缀
