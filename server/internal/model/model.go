@@ -38,6 +38,9 @@ type Article struct {
 	ViewCount  int    `gorm:"default:0" json:"view_count"`
 	// Visibility: public(默认) / private(仅自己) / draft(草稿, 连 URL 都404)
 	Visibility string `gorm:"size:16;not null;default:public" json:"visibility"`
+	// AuthorID 文章作者. 老文章保持 NULL, 仅 admin 可改; 非 admin 只能改自己作者的文章.
+	// 指针类型使 JSON 输出 null 而非 0, 与"无作者"语义一致.
+	AuthorID *uint64 `gorm:"index" json:"author_id"`
 }
 
 func (Article) TableName() string { return "articles" }
