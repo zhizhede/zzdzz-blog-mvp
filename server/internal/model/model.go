@@ -13,6 +13,9 @@ type User struct {
 	Username     string `gorm:"size:64;uniqueIndex;not null" json:"username"`
 	PasswordHash string `gorm:"size:128;not null" json:"-"`
 	IsActive     bool   `gorm:"not null;default:true" json:"is_active"`
+	// IsAdmin 标记超级管理员. 当前由 service.Login 根据 ZZDZZ_ADMIN_USERNAMES 推断回填,
+	// 数据库 schema 暂未落列; gorm 默认值 false, 真正取值以 service 为准.
+	IsAdmin bool `gorm:"-" json:"is_admin"`
 }
 
 func (User) TableName() string { return "users" }

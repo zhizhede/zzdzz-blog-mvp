@@ -1,6 +1,7 @@
 package router
 
 import (
+	"strings"
 	"time"
 
 	"github.com/gin-contrib/cors"
@@ -10,7 +11,38 @@ import (
 	"zzdzz-blog/server/config"
 	"zzdzz-blog/server/internal/handler"
 	"zzdzz-blog/server/internal/service"
+	jwtutil "zzdzz-blog/server/pkg/jwt"
 )
+
+// chainedAdmin = RequireAuth + RequireAdmin 的复合中间件, 用于后台写操作/管理类接口
+func chainedAdmin(cfg *config.JWTConfig) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		// 先复用 RequireAuth 的解析+注入逻辑
+		h := c.GetHeader("Authorization")
+		if !authHasBearer(h) {
+			handler.RequireAuth(cfg)(c)
+			return
+		}
+		// 已经有合法 token, 直接读 claims 判断 admin
+		claims, err := jwtutil.Parse(cfg.Secret, strings.TrimPrefix(h, "Bearer "))
+		if err != nil {
+			handler.RequireAuth(cfg)(c)
+			return
+		}
+		c.Set("user_id", claims.UserID)
+		c.Set("username", claims.Username)
+		c.Set("is_admin", claims.IsAdmin)
+		if !claims.IsAdmin {
+			handler.RequireAdmin()(c)
+			return
+		}
+		c.Next()
+	}
+}
+
+func authHasBearer(h string) bool {
+	return len(h) >= 7 && h[:7] == "Bearer "
+}
 
 func New(db *gorm.DB, cfg *config.Config) *gin.Engine {
 	r := gin.New()
@@ -72,25 +104,27 @@ func New(db *gorm.DB, cfg *config.Config) *gin.Engine {
 		categories := api.Group("/categories")
 		{
 			categories.GET("", cat.List)
-			categories.POST("", handler.RequireAuth(&cfg.JWT), cat.Create)
-			categories.PUT("/:id", handler.RequireAuth(&cfg.JWT), cat.Update)
-			categories.DELETE("/:id", handler.RequireAuth(&cfg.JWT), cat.Delete)
+			// 分类是 admin 后台资源, 非 admin 不允许改
+			categories.POST("", chainedAdmin(&cfg.JWT), cat.Create)
+			categories.PUT("/:id", chainedAdmin(&cfg.JWT), cat.Update)
+			categories.DELETE("/:id", chainedAdmin(&cfg.JWT), cat.Delete)
 		}
 
 		articles := api.Group("/articles")
 		{
-			// List / Get 走 OptionalAuth: 公开可读, 但带 token 时后端可识别为 admin 看到全部可见性
+			// List / Get 走 OptionalAuth: 公开可读, 带 token 时 admin 可看全部可见性; 非 admin 与匿名一致只看 public
 			articles.GET("", handler.OptionalAuth(&cfg.JWT), art.List)
 			articles.GET("/:id", handler.OptionalAuth(&cfg.JWT), art.Get)
-			articles.POST("", handler.RequireAuth(&cfg.JWT), art.Create)
-			articles.PUT("/:id", handler.RequireAuth(&cfg.JWT), art.Update)
-			articles.DELETE("/:id", handler.RequireAuth(&cfg.JWT), art.Delete)
+			// 写操作: 必须 admin
+			articles.POST("", chainedAdmin(&cfg.JWT), art.Create)
+			articles.PUT("/:id", chainedAdmin(&cfg.JWT), art.Update)
+			articles.DELETE("/:id", chainedAdmin(&cfg.JWT), art.Delete)
 		}
 
 		aiGroup := api.Group("/ai")
 		aiGroup.Use(handler.RequireAuth(&cfg.JWT))
 		{
-			// 持久化版会话管理
+			// AI 对话是登录用户都可用的功能, 不限 admin
 			aiGroup.GET("/conversations", ai.ListConversations)
 			aiGroup.POST("/conversations", ai.CreateConversation)
 			aiGroup.PATCH("/conversations/:id", ai.RenameConversation)
@@ -103,7 +137,7 @@ func New(db *gorm.DB, cfg *config.Config) *gin.Engine {
 		}
 
 		users := api.Group("/users")
-		users.Use(handler.RequireAuth(&cfg.JWT))
+		users.Use(chainedAdmin(&cfg.JWT))
 		{
 			users.GET("", userH.List)
 			users.POST("", userH.Create)

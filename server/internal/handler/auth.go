@@ -41,7 +41,7 @@ func (h *AuthHandler) Login(c *gin.Context) {
 
 	response.OK(c, gin.H{
 		"token":      token,
-		"user":       gin.H{"id": user.ID, "username": user.Username},
+		"user":       gin.H{"id": user.ID, "username": user.Username, "is_admin": user.IsAdmin},
 		"expires_in": int(h.cfg.ExpireDuration().Seconds()),
 	})
 }
@@ -49,7 +49,8 @@ func (h *AuthHandler) Login(c *gin.Context) {
 func (h *AuthHandler) Me(c *gin.Context) {
 	uid, _ := c.Get("user_id")
 	uname, _ := c.Get("username")
-	response.OK(c, gin.H{"id": uid, "username": uname})
+	isAdmin, _ := c.Get("is_admin")
+	response.OK(c, gin.H{"id": uid, "username": uname, "is_admin": isAdmin})
 }
 
 // userIDOf 从 gin.Context 取 user_id,支持 uint64 / float64(JSON 解码) / int 三种形态。
@@ -88,12 +89,28 @@ func RequireAuth(cfg *config.JWTConfig) gin.HandlerFunc {
 		}
 		c.Set("user_id", claims.UserID)
 		c.Set("username", claims.Username)
+		c.Set("is_admin", claims.IsAdmin)
+		c.Next()
+	}
+}
+
+// RequireAdmin 在 RequireAuth 基础上进一步校验 is_admin=true.
+// 必须挂在 RequireAuth 之后(或调用 RequireAuth 自身, 因为它已经注入 is_admin).
+func RequireAdmin() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		v, ok := c.Get("is_admin")
+		isAdmin, _ := v.(bool)
+		if !ok || !isAdmin {
+			response.Fail(c, 403, 4003, "admin only")
+			c.Abort()
+			return
+		}
 		c.Next()
 	}
 }
 
 // OptionalAuth 复用 RequireAuth 的解析逻辑, 但 token 缺失/无效时放行:
-//   - 有 token 且有效: 注入 user_id / username, handler 可识别为已登录用户
+//   - 有 token 且有效: 注入 user_id / username / is_admin, handler 可识别为已登录用户
 //   - 无 token 或 token 无效: 跳过, 继续走后续 handler(可能用于公开接口的"能识别就识别")
 func OptionalAuth(cfg *config.JWTConfig) gin.HandlerFunc {
 	return func(c *gin.Context) {
@@ -110,6 +127,7 @@ func OptionalAuth(cfg *config.JWTConfig) gin.HandlerFunc {
 		}
 		c.Set("user_id", claims.UserID)
 		c.Set("username", claims.Username)
+		c.Set("is_admin", claims.IsAdmin)
 		c.Next()
 	}
 }

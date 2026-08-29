@@ -11,6 +11,18 @@ import (
 	"zzdzz-blog/server/pkg/response"
 )
 
+// mustBool 从 gin.Context 取 bool, 类型不匹配视为 false.
+// 必须用 helper, 不能直接用 _, ok := c.Get(...) 当成 bool 用——
+// c.Get 拿的是 any, 值是 false 时也会"存在", 必须断言类型.
+func mustBool(c *gin.Context, key string) bool {
+	v, ok := c.Get(key)
+	if !ok {
+		return false
+	}
+	b, _ := v.(bool)
+	return b
+}
+
 type ArticleHandler struct {
 	svc *service.ArticleService
 }
@@ -34,8 +46,9 @@ func (h *ArticleHandler) List(c *gin.Context) {
 	catID, _ := strconv.ParseUint(c.Query("category_id"), 10, 64)
 	keyword := c.Query("q")
 
-	// 鉴权过的请求 (admin) → 看到全部可见性, 用于后台列表
-	_, includeAll := c.Get("user_id")
+	// 仅 admin 看到全部可见性; 普通登录用户与匿名一致, 只看 public
+	_, includeAll := c.Get("is_admin")
+	includeAll = includeAll && mustBool(c, "is_admin")
 
 	res, err := h.svc.List(service.ArticleListQuery{
 		Page:       page,
@@ -57,8 +70,8 @@ func (h *ArticleHandler) Get(c *gin.Context) {
 		response.BadRequest(c, "invalid id")
 		return
 	}
-	// 鉴权过的请求走 GetForAdmin, 可读 private/draft
-	_, isAdmin := c.Get("user_id")
+	// 鉴权过且是 admin → 走 GetForAdmin, 可读 private/draft; 普通登录用户与匿名一致
+	isAdmin := mustBool(c, "is_admin")
 	var (
 		a    *model.Article
 		serr error
