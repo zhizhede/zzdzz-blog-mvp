@@ -43,8 +43,12 @@ router.beforeEach((to) => {
   if (to.meta.requiresAuth && !userStore.token) {
     return { path: '/login', query: { redirect: to.fullPath } }
   }
+  if (to.meta.requiresAuth && userStore.token && !userStore.isAdmin) {
+    // 非 admin 不允许进后台, 踢到公开博客
+    return { path: '/blog' }
+  }
   if (to.path === '/login' && userStore.token) {
-    return { path: '/admin/articles' }
+    return userStore.isAdmin ? { path: '/admin/articles' } : { path: '/blog' }
   }
 })
 

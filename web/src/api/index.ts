@@ -2,14 +2,14 @@ import { http, type ApiResponse } from './http'
 
 export interface LoginResult {
   token: string
-  user: { id: number; username: string }
+  user: { id: number; username: string; is_admin: boolean }
   expires_in: number
 }
 
 export const authApi = {
   login: (username: string, password: string) =>
     http.post<any, ApiResponse<LoginResult>>('/auth/login', { username, password }),
-  me: () => http.get<any, ApiResponse<{ id: number; username: string }>>('/auth/me'),
+  me: () => http.get<any, ApiResponse<{ id: number; username: string; is_admin: boolean }>>('/auth/me'),
 }
 
 export * from './ai'

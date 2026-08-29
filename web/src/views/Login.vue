@@ -20,7 +20,7 @@ const handleLogin = async () => {
   loading.value = true
   try {
     const res = await authApi.login(form.value.username, form.value.password)
-    userStore.setAuth(res.data.token, res.data.user.id, res.data.user.username)
+    userStore.setAuth(res.data.token, res.data.user.id, res.data.user.username, !!res.data.user.is_admin)
     ElMessage.success('登录成功')
     const redirect = (route.query.redirect as string) || '/admin/articles'
     router.push(redirect)

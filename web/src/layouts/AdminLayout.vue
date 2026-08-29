@@ -1,9 +1,27 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import { useRouter } from 'vue-router'
+import { ElMessage } from 'element-plus'
 import { useUserStore } from '../stores/user'
 
 const router = useRouter()
 const userStore = useUserStore()
+
+const currentPath = computed(() => router.currentRoute.value.path)
+const isAdmin = computed(() => userStore.isAdmin)
+const inAdminZone = computed(() => currentPath.value.startsWith('/admin'))
+
+const handleCommand = (cmd: string) => {
+  if (cmd === 'profile') {
+    ElMessage.info('个人信息 — 待实现')
+    return
+  }
+  if (cmd === 'go-client') {
+    if (!inAdminZone.value) return
+    router.push('/blog')
+    return
+  }
+}
 
 const handleLogout = () => {
   userStore.logout()
@@ -44,7 +62,22 @@ const handleLogout = () => {
     <el-container>
       <el-header class="header">
         <span class="welcome">{{ userStore.username }}</span>
-        <el-button text @click="handleLogout">退出</el-button>
+        <el-dropdown trigger="click" @command="handleCommand">
+          <span class="user-trigger">
+            <el-icon><ArrowDown /></el-icon>
+          </span>
+          <template #dropdown>
+            <el-dropdown-menu>
+              <el-dropdown-item command="profile">个人信息</el-dropdown-item>
+              <el-dropdown-item v-if="isAdmin" command="go-client" divided>
+                前往 client 端
+              </el-dropdown-item>
+              <el-dropdown-item command="logout" divided @click="handleLogout">
+                退出
+              </el-dropdown-item>
+            </el-dropdown-menu>
+          </template>
+        </el-dropdown>
       </el-header>
 
       <el-main>
@@ -72,8 +105,17 @@ const handleLogout = () => {
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  gap: 16px;
+  gap: 12px;
 }
 .welcome { color: #606266; margin-right: auto; padding-left: 8px; }
+.user-trigger {
+  display: inline-flex;
+  align-items: center;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 4px;
+  color: #606266;
+}
+.user-trigger:hover { background: #f5f7fa; }
 .el-main { background: var(--bg); padding: 24px; }
 </style>
