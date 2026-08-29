@@ -34,6 +34,7 @@ func (h *AuthHandler) Login(c *gin.Context) {
 
 	token, user, err := h.svc.Login(req.Username, req.Password)
 	if err != nil {
+		// 不区分"密码错误"和"账号被禁用", 避免泄漏账号存在性
 		response.Unauthorized(c, "invalid username or password")
 		return
 	}

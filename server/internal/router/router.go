@@ -51,6 +51,8 @@ func New(db *gorm.DB, cfg *config.Config) *gin.Engine {
 	art := handler.NewArticleHandler(artSvc)
 	aiSvc := service.NewAIService(db)
 	ai := handler.NewAIHandler(&cfg.AI, aiSvc)
+	userSvc := service.NewUserService(db)
+	userH := handler.NewUserHandler(userSvc)
 
 	api := r.Group("/api/v1")
 	{
@@ -98,6 +100,15 @@ func New(db *gorm.DB, cfg *config.Config) *gin.Engine {
 
 			// 兼容旧版（无状态）
 			aiGroup.POST("/chat", ai.Chat)
+		}
+
+		users := api.Group("/users")
+		users.Use(handler.RequireAuth(&cfg.JWT))
+		{
+			users.GET("", userH.List)
+			users.POST("", userH.Create)
+			users.PUT("/:id/password", userH.ChangePassword)
+			users.PATCH("/:id/active", userH.SetActive)
 		}
 	}
 

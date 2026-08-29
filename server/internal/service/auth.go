@@ -13,6 +13,7 @@ import (
 
 var (
 	ErrInvalidCredentials = errors.New("invalid username or password")
+	ErrUserDisabled       = errors.New("user is disabled")
 )
 
 type AuthService struct {
@@ -35,6 +36,10 @@ func (s *AuthService) Login(username, password string) (string, *model.User, err
 
 	if err := bcrypt.CompareHashAndPassword([]byte(u.PasswordHash), []byte(password)); err != nil {
 		return "", nil, ErrInvalidCredentials
+	}
+
+	if !u.IsActive {
+		return "", nil, ErrUserDisabled
 	}
 
 	token, err := jwtutil.Generate(s.cfg.Secret, s.cfg.ExpireDuration(), u.ID, u.Username)
