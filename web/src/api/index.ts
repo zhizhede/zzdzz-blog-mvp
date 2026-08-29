@@ -15,6 +15,9 @@ export const authApi = {
 export * from './ai'
 export { aiApi } from './ai'
 
+export * from './user'
+export { userApi } from './user'
+
 export interface Category {
   id: number
   name: string

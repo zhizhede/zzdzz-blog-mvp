@@ -17,6 +17,7 @@ const routes = [
       { path: 'admin/articles/new', component: () => import('../views/admin/ArticleEditor.vue') },
       { path: 'admin/articles/:id/edit', component: () => import('../views/admin/ArticleEditor.vue') },
       { path: 'admin/categories', component: () => import('../views/admin/CategoryManage.vue') },
+      { path: 'admin/users', component: () => import('../views/admin/UserManage.vue') },
       { path: 'admin/ai', component: () => import('../views/admin/AICenter.vue') },
     ],
   },

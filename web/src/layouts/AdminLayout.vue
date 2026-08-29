@@ -29,6 +29,9 @@ const handleLogout = () => {
         <el-menu-item index="/admin/categories">
           <el-icon><Folder /></el-icon><span>分类</span>
         </el-menu-item>
+        <el-menu-item index="/admin/users">
+          <el-icon><User /></el-icon><span>用户</span>
+        </el-menu-item>
         <el-menu-item index="/admin/ai">
           <el-icon><ChatDotRound /></el-icon><span>AI 对话</span>
         </el-menu-item>
