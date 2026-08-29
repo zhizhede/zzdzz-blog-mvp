@@ -12,6 +12,7 @@ type User struct {
 	Base
 	Username     string `gorm:"size:64;uniqueIndex;not null" json:"username"`
 	PasswordHash string `gorm:"size:128;not null" json:"-"`
+	IsActive     bool   `gorm:"not null;default:true" json:"is_active"`
 }
 
 func (User) TableName() string { return "users" }
