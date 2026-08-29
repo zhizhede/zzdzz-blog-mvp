@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useRouter } from 'vue-router'
-import { ElMessage } from 'element-plus'
 import { useUserStore } from '../../stores/user'
 
 const router = useRouter()
@@ -12,7 +11,7 @@ const loggedIn = computed(() => !!userStore.token)
 
 const handleCommand = (cmd: string) => {
   if (cmd === 'profile') {
-    ElMessage.info('个人信息 — 待实现')
+    router.push('/space/profile')
     return
   }
   if (cmd === 'go-admin') {
