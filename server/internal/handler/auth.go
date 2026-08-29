@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"errors"
 	"strings"
 
 	"github.com/gin-gonic/gin"
@@ -51,6 +52,37 @@ func (h *AuthHandler) Me(c *gin.Context) {
 	uname, _ := c.Get("username")
 	isAdmin, _ := c.Get("is_admin")
 	response.OK(c, gin.H{"id": uid, "username": uname, "is_admin": isAdmin})
+}
+
+type changeOwnPasswordReq struct {
+	OldPassword string `json:"old_password" binding:"required"`
+	NewPassword string `json:"new_password" binding:"required,min=6,max=64"`
+}
+
+// ChangeOwnPassword 登录用户自助改密. 只能改自己的密码; handler 强制 actorID == targetID.
+func (h *AuthHandler) ChangeOwnPassword(c *gin.Context) {
+	uid := userIDOf(c)
+	if uid == 0 {
+		response.Unauthorized(c, "missing user id")
+		return
+	}
+	var req changeOwnPasswordReq
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, "old_password and new_password (>=6) required")
+		return
+	}
+	if err := h.svc.ChangePassword(uid, req.OldPassword, req.NewPassword); err != nil {
+		switch {
+		case errors.Is(err, service.ErrUserNotFound):
+			response.Fail(c, 404, 4004, "user not found")
+		case errors.Is(err, service.ErrInvalidOldPassword):
+			response.Fail(c, 400, 4001, "old password incorrect")
+		default:
+			response.ServerError(c, err.Error())
+		}
+		return
+	}
+	response.OK(c, nil)
 }
 
 // userIDOf 从 gin.Context 取 user_id,支持 uint64 / float64(JSON 解码) / int 三种形态。

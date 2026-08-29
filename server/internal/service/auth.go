@@ -74,3 +74,22 @@ func (s *AuthService) Login(username, password string) (string, *model.User, err
 	u.IsAdmin = isAdmin
 	return token, &u, nil
 }
+
+// ChangePassword 登录用户自助改密. 强制 actorID == targetID, 由 handler 自行保证.
+func (s *AuthService) ChangePassword(userID uint64, oldPassword, newPassword string) error {
+	var u model.User
+	if err := s.db.First(&u, userID).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return ErrUserNotFound
+		}
+		return err
+	}
+	if err := bcrypt.CompareHashAndPassword([]byte(u.PasswordHash), []byte(oldPassword)); err != nil {
+		return ErrInvalidOldPassword
+	}
+	hash, err := bcrypt.GenerateFromPassword([]byte(newPassword), bcrypt.DefaultCost)
+	if err != nil {
+		return err
+	}
+	return s.db.Model(&u).Update("password_hash", string(hash)).Error
+}

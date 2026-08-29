@@ -98,6 +98,8 @@ func New(db *gorm.DB, cfg *config.Config) *gin.Engine {
 			protected.Use(handler.RequireAuth(&cfg.JWT))
 			{
 				protected.GET("/me", auth.Me)
+				// 自助改密: 登录用户改自己的密码(强制 actorID == targetID)
+				protected.PUT("/password", auth.ChangeOwnPassword)
 			}
 		}
 
@@ -112,13 +114,14 @@ func New(db *gorm.DB, cfg *config.Config) *gin.Engine {
 
 		articles := api.Group("/articles")
 		{
-			// List / Get 走 OptionalAuth: 公开可读, 带 token 时 admin 可看全部可见性; 非 admin 与匿名一致只看 public
+			// List / Get 走 OptionalAuth: 公开可读; admin 可看全部可见性;
+			// 自己 (handler 按 author_id 分支) 也可看自己的 private/draft; 其他人按 public
 			articles.GET("", handler.OptionalAuth(&cfg.JWT), art.List)
 			articles.GET("/:id", handler.OptionalAuth(&cfg.JWT), art.Get)
-			// 写操作: 必须 admin
-			articles.POST("", chainedAdmin(&cfg.JWT), art.Create)
-			articles.PUT("/:id", chainedAdmin(&cfg.JWT), art.Update)
-			articles.DELETE("/:id", chainedAdmin(&cfg.JWT), art.Delete)
+			// 写操作: 任何登录用户都可调, handler 内部按"admin 或作者本人"判断权限
+			articles.POST("", handler.RequireAuth(&cfg.JWT), art.Create)
+			articles.PUT("/:id", handler.RequireAuth(&cfg.JWT), art.Update)
+			articles.DELETE("/:id", handler.RequireAuth(&cfg.JWT), art.Delete)
 		}
 
 		aiGroup := api.Group("/ai")
