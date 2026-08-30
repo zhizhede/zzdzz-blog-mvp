@@ -62,6 +62,7 @@ export interface Article {
   author_id: number | null
   last_autosaved_at: string | null
   tags?: Tag[]
+  tag_ids?: number[] | null
 }
 
 export interface ArticleListResult {

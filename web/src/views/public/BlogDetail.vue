@@ -1,7 +1,10 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { articleApi, categoryApi, type Article, type Category } from '../../api'
+import IssueTag from '../../components/IssueTag.vue'
+import Markdown from '../../components/Markdown.vue'
+import AppFooter from '../../components/AppFooter.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -13,21 +16,32 @@ onMounted(async () => {
   const res = await articleApi.getWithTags(id)
   article.value = res.data
   const cats = await categoryApi.list()
-  const c = cats.data.find((x: Category) => x.id === res.data.category_id)
+  const c = cats.data?.find?.((x: Category) => x.id === res.data.category_id)
   categoryName.value = c?.name || '未分类'
+})
+
+const dateStr = computed(() => {
+  if (!article.value) return ''
+  return new Date(article.value.created_at).toLocaleString()
 })
 </script>
 
 <template>
-  <div v-if="article" class="blog-detail">
-    <el-button text @click="router.push('/blog')">← 返回列表</el-button>
-    <h1 class="title">{{ article.title }}</h1>
+  <div v-if="article" class="container-narrow detail-page">
+    <button class="back" @click="router.push('/blog')">← 返回列表</button>
+
+    <IssueTag prefix="ESSAY" text="" :suffix="dateStr" />
+
+    <h1 class="display title">{{ article.title }}</h1>
+
     <div class="meta">
-      <el-tag size="small">{{ categoryName }}</el-tag>
-      <span>{{ new Date(article.created_at).toLocaleString() }}</span>
-      <span>· {{ article.view_count }} 阅读</span>
+      <span class="cat">{{ categoryName }}</span>
+      <span class="dot" />
+      <span class="mono">{{ dateStr }}</span>
+      <span class="dot" />
+      <span class="mono">{{ article.view_count }} 阅读</span>
       <template v-if="article.tags && article.tags.length">
-        <span class="dot">·</span>
+        <span class="dot" />
         <router-link
           v-for="t in article.tags"
           :key="t.id"
@@ -36,34 +50,91 @@ onMounted(async () => {
         >#{{ t.name }}</router-link>
       </template>
     </div>
-    <div v-if="article.summary" class="summary">{{ article.summary }}</div>
-    <pre class="content">{{ article.content }}</pre>
+
+    <p v-if="article.summary" class="summary">{{ article.summary }}</p>
+
+    <Markdown :source="article.content" />
+
+    <AppFooter />
   </div>
 </template>
 
 <style scoped>
-.blog-detail { background: #fff; padding: 28px 32px; border-radius: 8px; border: 1px solid #ebeef5; }
-.title { margin: 16px 0 8px; font-size: 28px; color: #2c3e50; }
-.meta { display: flex; gap: 12px; align-items: center; color: #909399; font-size: 13px; margin-bottom: 16px; flex-wrap: wrap; }
-.meta .dot { color: #c0c4cc; }
+.detail-page {
+  padding: 40px 0 80px;
+  display: flex;
+  flex-direction: column;
+}
+.back {
+  background: transparent;
+  border: 0;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--ink-mute);
+  cursor: pointer;
+  padding: 0;
+  margin-bottom: 32px;
+  text-align: left;
+  align-self: flex-start;
+}
+.back:hover { color: var(--accent); }
+.title {
+  font-size: 48px;
+  line-height: 1.05;
+  margin: 16px 0 8px;
+  letter-spacing: -1.2px;
+  color: var(--ink);
+}
+.meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+  color: var(--ink-mute);
+  font-size: 13px;
+  margin-bottom: 16px;
+}
+.meta .cat {
+  font-family: var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-size: 11px;
+  color: var(--accent);
+}
+.meta .mono { font-family: var(--font-mono); }
+.meta .dot {
+  width: 3px;
+  height: 3px;
+  background: var(--ink-faint);
+  border-radius: 50%;
+}
 .tag-chip {
-  font-family: 'JetBrains Mono', monospace;
+  font-family: var(--font-mono);
   font-size: 12px;
-  color: #409eff;
-  border: 1px solid #d9ecff;
-  background: #ecf5ff;
+  color: var(--ink-mute);
+  border: 1px solid var(--rule-soft);
   padding: 2px 8px;
   border-radius: 999px;
   text-decoration: none;
+  transition: all var(--transition);
 }
-.tag-chip:hover { background: #409eff; color: #fff; border-color: #409eff; }
+.tag-chip:hover {
+  background: var(--ink);
+  color: var(--ink-on-inverse);
+  border-color: var(--ink);
+}
 .summary {
-  background: #f6f8fa; padding: 12px 16px; border-left: 3px solid #409eff;
-  color: #606266; margin-bottom: 20px; border-radius: 4px;
+  background: var(--bg-sunken);
+  padding: 12px 16px;
+  border-left: 3px solid var(--accent);
+  color: var(--ink-soft);
+  font-style: italic;
+  margin: 0 0 24px;
+  border-radius: var(--radius);
 }
-.content {
-  white-space: pre-wrap; word-break: break-word;
-  font-family: -apple-system, 'PingFang SC', 'Microsoft YaHei', sans-serif;
-  font-size: 16px; line-height: 1.9; color: #2c3e50;
+@media (max-width: 760px) {
+  .title { font-size: 32px; }
 }
 </style>
