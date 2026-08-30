@@ -23,6 +23,8 @@ web/.cache/
 web/.env
 web/.env.local
 web/*.local
+# web/demo/ 是独立的 Vite 演示项目,与主 web/ 解耦,不入库
+web/demo/
 
 # ─────────────── Logs ───────────────
 *.log
