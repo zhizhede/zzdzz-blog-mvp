@@ -1,0 +1,123 @@
+/* =========================================================
+ * Design tokens — light & dark, both drawn deliberately
+ * Avoid the three common AI defaults (cream/serif, acid-green,
+ * newspaper grid). This site goes for an editorial / "small
+ * magazine" feel with a single amber accent.
+ * ========================================================= */
+
+:root,
+:root[data-theme='light'] {
+  /* surfaces */
+  --bg: #fbf8f1;
+  --bg-elev: #ffffff;
+  --bg-sunken: #f1ece0;
+  --bg-inverse: #1b1822;
+
+  /* ink */
+  --ink: #1b1822;
+  --ink-soft: #4a4452;
+  --ink-mute: #807689;
+  --ink-faint: #b6adbe;
+  --ink-on-inverse: #f1ece0;
+
+  /* rules & borders */
+  --rule: #1b1822;
+  --rule-soft: #d9d1c1;
+  --border: #e5dccb;
+
+  /* brand accent (used sparingly) */
+  --accent: #c2724a;
+  --accent-soft: #e8c8b0;
+  --accent-ink: #ffffff;
+
+  /* support */
+  --success: #6b7a4b;
+  --danger: #8c2f2f;
+  --info: #395e7a;
+  --warn: #b68340;
+
+  /* type */
+  --font-display: 'Fraunces', 'Source Han Serif SC', 'Songti SC', Georgia, serif;
+  --font-body: 'Inter', 'PingFang SC', 'Microsoft YaHei', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', 'SF Mono', Consolas, 'Liberation Mono', monospace;
+
+  /* size */
+  --container: 1080px;
+  --container-narrow: 760px;
+
+  /* misc */
+  --shadow-1: 0 1px 0 rgba(27, 24, 34, 0.04);
+  --shadow-2: 0 6px 24px -10px rgba(27, 24, 34, 0.18);
+  --radius: 4px;
+  --transition: 200ms ease;
+
+  /* override Element Plus */
+  --el-color-primary: var(--accent);
+  --el-color-primary-light-3: #d3936f;
+  --el-color-primary-light-5: #e1b294;
+  --el-color-primary-light-7: #edcfb8;
+  --el-color-primary-light-9: #f6e4d3;
+  --el-color-primary-dark-2: #9d5a39;
+  --el-color-success: var(--success);
+  --el-color-danger: var(--danger);
+  --el-color-warning: var(--warn);
+  --el-color-info: var(--info);
+  --el-bg-color: var(--bg-elev);
+  --el-bg-color-page: var(--bg);
+  --el-text-color-primary: var(--ink);
+  --el-text-color-regular: var(--ink-soft);
+  --el-text-color-secondary: var(--ink-mute);
+  --el-text-color-placeholder: var(--ink-faint);
+  --el-border-color: var(--border);
+  --el-border-color-light: var(--border);
+  --el-fill-color-blank: var(--bg-elev);
+}
+
+:root[data-theme='dark'] {
+  --bg: #1b1822;
+  --bg-elev: #251f2e;
+  --bg-sunken: #15121b;
+  --bg-inverse: #f1ece0;
+
+  --ink: #f1ece0;
+  --ink-soft: #c8c0ce;
+  --ink-mute: #908898;
+  --ink-faint: #5a5260;
+  --ink-on-inverse: #1b1822;
+
+  --rule: #f1ece0;
+  --rule-soft: #3a3344;
+  --border: #342d3d;
+
+  --accent: #d99263;
+  --accent-soft: #4a2f1c;
+  --accent-ink: #1b1822;
+
+  --success: #93a36a;
+  --danger: #c46262;
+  --info: #6c9bbe;
+  --warn: #d4a25c;
+
+  --shadow-1: 0 1px 0 rgba(0, 0, 0, 0.3);
+  --shadow-2: 0 6px 28px -8px rgba(0, 0, 0, 0.55);
+
+  --el-color-primary: var(--accent);
+  --el-color-primary-light-3: #e1a87f;
+  --el-color-primary-light-5: #e8bf9c;
+  --el-color-primary-light-7: #f0d5b8;
+  --el-color-primary-light-9: #2a1f15;
+  --el-color-primary-dark-2: #b87649;
+  --el-color-success: var(--success);
+  --el-color-danger: var(--danger);
+  --el-color-warning: var(--warn);
+  --el-color-info: var(--info);
+  --el-bg-color: var(--bg-elev);
+  --el-bg-color-page: var(--bg);
+  --el-text-color-primary: var(--ink);
+  --el-text-color-regular: var(--ink-soft);
+  --el-text-color-secondary: var(--ink-mute);
+  --el-text-color-placeholder: var(--ink-faint);
+  --el-border-color: var(--border);
+  --el-border-color-light: var(--border);
+  --el-fill-color-blank: var(--bg-elev);
+}
