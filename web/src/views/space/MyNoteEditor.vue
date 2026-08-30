@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { articleApi, categoryApi, type Category } from '../../api'
+import { articleApi, categoryApi, tagApi, type Category, type Tag } from '../../api'
 
 const route = useRoute()
 const router = useRouter()
@@ -11,31 +11,104 @@ const id = Number(route.params.id) || 0
 const isEdit = id > 0
 
 const categories = ref<Category[]>([])
+const allTags = ref<Tag[]>([])
 const form = ref({
   title: '',
   slug: '',
   summary: '',
   content: '',
   category_id: 0 as number,
-  visibility: 'public' as 'public' | 'private' | 'draft',
+  tag_ids: [] as number[],
+  visibility: 'private' as 'public' | 'private' | 'draft',
 })
 const saving = ref(false)
+const lastSavedAt = ref<string | null>(null)
+const saveError = ref<string | null>(null)
+const dirty = ref(false)
+const draftId = ref<number | null>(isEdit ? id : null)
 
 const fetchCategories = async () => {
   const res = await categoryApi.list()
   categories.value = res.data
 }
+const fetchTags = async () => {
+  const res = await tagApi.list()
+  allTags.value = res.data
+}
 
 const fetchArticle = async () => {
   if (!isEdit) return
-  const res = await articleApi.get(id)
+  const res = await articleApi.getWithTags(id)
   form.value = {
     title: res.data.title,
     slug: res.data.slug,
     summary: res.data.summary,
     content: res.data.content,
     category_id: res.data.category_id,
-    visibility: res.data.visibility || 'public',
+    tag_ids: (res.data.tags || []).map((t) => t.id),
+    visibility: res.data.visibility || 'private',
+  }
+  lastSavedAt.value = res.data.last_autosaved_at
+}
+
+// autosave + localStorage 兜底
+const LS_KEY_PREFIX = 'autosave-space:'
+function lsKey(aid: number | null) { return LS_KEY_PREFIX + (aid ?? 'new') }
+function writeLocalDraft() {
+  try {
+    localStorage.setItem(lsKey(draftId.value), JSON.stringify({
+      title: form.value.title,
+      summary: form.value.summary,
+      content: form.value.content,
+      category_id: form.value.category_id,
+      visibility: form.value.visibility,
+      savedAt: new Date().toISOString(),
+    }))
+  } catch {}
+}
+function clearLocalDraft() {
+  try { localStorage.removeItem(lsKey(draftId.value)) } catch {}
+}
+
+let timer: number | null = null
+function scheduleAutosave() {
+  if (timer) window.clearTimeout(timer)
+  timer = window.setTimeout(doAutosave, 8000)
+}
+function markDirty() { dirty.value = true; saveError.value = null; writeLocalDraft() }
+function onInput() { markDirty(); scheduleAutosave() }
+
+async function doAutosave() {
+  if (!form.value.title.trim() || !form.value.content.trim()) return
+  saving.value = true
+  try {
+    if (!draftId.value) {
+      const res = await articleApi.create({
+        title: form.value.title,
+        slug: form.value.slug,
+        summary: form.value.summary,
+        content: form.value.content,
+        category_id: form.value.category_id || categories.value[0]?.id || 0,
+        visibility: 'draft',
+        tag_ids: form.value.tag_ids,
+      })
+      draftId.value = res.data.id
+      window.history.replaceState({}, '', `/space/notes/${res.data.id}/edit`)
+      lastSavedAt.value = res.data.last_autosaved_at
+    } else {
+      const res = await articleApi.autosave(draftId.value, {
+        title: form.value.title,
+        summary: form.value.summary,
+        content: form.value.content,
+        category_id: form.value.category_id,
+      })
+      lastSavedAt.value = res.data.last_autosaved_at
+    }
+    saveError.value = null
+  } catch (e: any) {
+    saveError.value = e?.message || 'autosave failed'
+  } finally {
+    saving.value = false
   }
 }
 
@@ -44,24 +117,39 @@ const handleSave = async () => {
     ElMessage.warning('请填写标题、正文、分类')
     return
   }
-  saving.value = true
-  try {
-    if (isEdit) {
-      await articleApi.update(id, form.value)
-      ElMessage.success('已保存')
-    } else {
-      const res = await articleApi.create(form.value)
-      ElMessage.success('已发布')
-      router.replace(`/space/notes/${res.data.id}/edit`)
-    }
-  } finally {
-    saving.value = false
+  if (!draftId.value || dirty.value) await doAutosave()
+  if (!draftId.value) {
+    ElMessage.error('草稿保存失败')
+    return
   }
+  const res = await articleApi.update(draftId.value, {
+    title: form.value.title,
+    slug: form.value.slug,
+    summary: form.value.summary,
+    content: form.value.content,
+    category_id: form.value.category_id,
+    visibility: form.value.visibility,
+    tag_ids: form.value.tag_ids,
+  })
+  clearLocalDraft()
+  ElMessage.success('已保存')
+  router.replace(`/space/notes/${res.data.id}/edit`)
 }
 
 onMounted(async () => {
-  await fetchCategories()
+  await Promise.all([fetchCategories(), fetchTags()])
   await fetchArticle()
+})
+
+onBeforeUnmount(() => {
+  if (timer) window.clearTimeout(timer)
+})
+
+const statusText = computed(() => {
+  if (saveError.value) return `未同步: ${saveError.value}`
+  if (saving.value) return '保存中…'
+  if (lastSavedAt.value) return `已自动保存 ${new Date(lastSavedAt.value).toLocaleTimeString()}`
+  return '尚未自动保存'
 })
 </script>
 
@@ -77,24 +165,38 @@ onMounted(async () => {
       </div>
     </div>
 
+    <p :class="['status', saveError && 'error']">{{ statusText }}</p>
+
     <el-card>
       <el-form label-width="80px">
         <el-form-item label="标题" required>
-          <el-input v-model="form.title" placeholder="笔记标题" maxlength="255" />
+          <el-input v-model="form.title" placeholder="笔记标题" maxlength="255" @input="onInput" />
         </el-form-item>
         <el-form-item label="Slug">
           <el-input v-model="form.slug" placeholder="URL 友好标识,可空" />
         </el-form-item>
         <el-form-item label="摘要">
-          <el-input v-model="form.summary" placeholder="一句话摘要" maxlength="500" />
+          <el-input v-model="form.summary" placeholder="一句话摘要" maxlength="500" @input="onInput" />
         </el-form-item>
         <el-form-item label="分类" required>
-          <el-select v-model="form.category_id" placeholder="选择分类" style="width: 200px">
+          <el-select v-model="form.category_id" placeholder="选择分类" style="width: 200px" @change="onInput">
             <el-option v-for="c in categories" :key="c.id" :label="c.name" :value="c.id" />
           </el-select>
         </el-form-item>
+        <el-form-item label="标签">
+          <el-select
+            v-model="form.tag_ids"
+            multiple
+            collapse-tags
+            placeholder="选择标签(可多选)"
+            style="width: 100%"
+            @change="onInput"
+          >
+            <el-option v-for="t in allTags" :key="t.id" :label="t.name" :value="t.id" />
+          </el-select>
+        </el-form-item>
         <el-form-item label="可见性">
-          <el-radio-group v-model="form.visibility">
+          <el-radio-group v-model="form.visibility" @change="onInput">
             <el-radio-button value="public">公开</el-radio-button>
             <el-radio-button value="private">仅自己</el-radio-button>
             <el-radio-button value="draft">草稿</el-radio-button>
@@ -110,6 +212,7 @@ onMounted(async () => {
             :rows="18"
             placeholder="支持 Markdown"
             resize="vertical"
+            @input="onInput"
           />
         </el-form-item>
       </el-form>
@@ -121,4 +224,6 @@ onMounted(async () => {
 .toolbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
 .toolbar h2 { margin: 0; }
 .visibility-hint { margin-left: 12px; color: #909399; font-size: 13px; }
+.status { color: #909399; font-size: 13px; margin: 0 0 12px; }
+.status.error { color: #c45656; }
 </style>

@@ -1,20 +1,30 @@
 <script setup lang="ts">
-import { onMounted, ref, computed } from 'vue'
-import { useRouter } from 'vue-router'
-import { articleApi, categoryApi, type Article, type Category } from '../../api'
+import { onMounted, ref, computed, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import { articleApi, categoryApi, tagApi, type Article, type Category, type TagWithCount } from '../../api'
 
+const route = useRoute()
 const router = useRouter()
 const articles = ref<Article[]>([])
 const categories = ref<Category[]>([])
+const tags = ref<TagWithCount[]>([])
 const filterCat = ref(0)
+const filterTag = ref(0)
 
 const fetchData = async () => {
-  const [a, c] = await Promise.all([
-    articleApi.list({ page: 1, size: 50, category_id: filterCat.value || undefined }),
+  const [a, c, t] = await Promise.all([
+    articleApi.list({
+      page: 1,
+      size: 50,
+      category_id: filterCat.value || undefined,
+      tag_id: filterTag.value || undefined,
+    }),
     categoryApi.list(),
+    tagApi.list(),
   ])
-  articles.value = a.data.items
-  categories.value = c.data
+  articles.value = a.data.items ?? []
+  categories.value = c.data ?? []
+  tags.value = t.data ?? []
 }
 
 const filtered = computed(() =>
@@ -24,7 +34,12 @@ const filtered = computed(() =>
 const categoryName = (id: number) => categories.value.find((c) => c.id === id)?.name || '未分类'
 const summary = (a: Article) => a.summary || a.content.slice(0, 80).replace(/\n/g, ' ')
 
-onMounted(fetchData)
+onMounted(() => {
+  const q = route.query.tag_id
+  if (q) filterTag.value = Number(q) || 0
+  fetchData()
+})
+watch([filterCat, filterTag], () => fetchData())
 </script>
 
 <template>
@@ -38,6 +53,17 @@ onMounted(fetchData)
         :class="['tag', filterCat === c.id && 'active']"
         @click="filterCat = c.id"
       >{{ c.name }}</span>
+    </div>
+
+    <div v-if="tags.length" class="filters" data-test="tag-row">
+      <span class="filter-label">标签:</span>
+      <span :class="['tag', filterTag === 0 && 'active']" @click="filterTag = 0">全部</span>
+      <span
+        v-for="t in tags"
+        :key="t.id"
+        :class="['tag', filterTag === t.id && 'active']"
+        @click="filterTag = t.id"
+      >#{{ t.name }} <em>{{ t.count }}</em></span>
     </div>
 
     <article v-for="a in filtered" :key="a.id" class="post-card" @click="router.push(`/blog/a/${a.id}`)">
@@ -62,7 +88,9 @@ onMounted(fetchData)
   padding: 4px 12px; border-radius: 16px; background: #f0f2f5;
   cursor: pointer; font-size: 13px; color: #606266;
 }
+.tag em { font-style: normal; color: #c0c4cc; font-size: 11px; margin-left: 4px; }
 .tag.active { background: #409eff; color: #fff; }
+.tag.active em { color: #fff; opacity: 0.7; }
 .post-card {
   background: #fff; border-radius: 8px; padding: 20px 24px;
   cursor: pointer; transition: all 0.2s;
