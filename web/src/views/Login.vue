@@ -4,6 +4,7 @@ import { useRouter, useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { authApi } from '../api'
 import { useUserStore } from '../stores/user'
+import IssueTag from '../components/IssueTag.vue'
 
 const router = useRouter()
 const route = useRoute()
@@ -24,7 +25,7 @@ const handleLogin = async () => {
     ElMessage.success('登录成功')
     const redirect = (route.query.redirect as string) || '/admin/articles'
     router.push(redirect)
-  } catch (e) {
+  } catch {
     // 拦截器已提示
   } finally {
     loading.value = false
@@ -34,55 +35,108 @@ const handleLogin = async () => {
 
 <template>
   <div class="login-wrap">
-    <el-card class="login-card">
-      <h2 class="title">zzdzz blog</h2>
-      <p class="subtitle">登录到管理后台</p>
-      <el-form @submit.prevent="handleLogin">
-        <el-form-item>
-          <el-input v-model="form.username" placeholder="用户名" size="large">
-            <template #prefix><el-icon><User /></el-icon></template>
-          </el-input>
-        </el-form-item>
-        <el-form-item>
-          <el-input
+    <div class="login-card">
+      <IssueTag prefix="ISSUE" text="01" suffix="ACCESS" />
+      <h1 class="display title">zzdzz <em>blog</em></h1>
+      <p class="lede">登录到管理后台或个人空间。</p>
+
+      <form class="form" @submit.prevent="handleLogin">
+        <label class="field">
+          <span class="mono label">USERNAME</span>
+          <input
+            v-model="form.username"
+            class="input"
+            placeholder="用户名"
+            autocomplete="username"
+          />
+        </label>
+        <label class="field">
+          <span class="mono label">PASSWORD</span>
+          <input
             v-model="form.password"
             type="password"
+            class="input"
             placeholder="密码"
-            size="large"
-            show-password
+            autocomplete="current-password"
             @keyup.enter="handleLogin"
-          >
-            <template #prefix><el-icon><Lock /></el-icon></template>
-          </el-input>
-        </el-form-item>
-        <el-button
-          type="primary"
-          size="large"
-          :loading="loading"
-          class="submit"
-          @click="handleLogin"
-        >
-          登录
-        </el-button>
-      </el-form>
-    </el-card>
+          />
+        </label>
+        <button class="primary-btn" :disabled="loading" @click.prevent="handleLogin">
+          <span v-if="loading" class="mono">…</span>
+          <span v-else>登 录</span>
+        </button>
+      </form>
+
+      <p class="hint mono">默认 admin / 123456</p>
+    </div>
   </div>
 </template>
 
 <style scoped>
 .login-wrap {
-  height: 100vh;
+  min-height: 100vh;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: var(--bg);
+  padding: 24px;
 }
 .login-card {
-  width: 380px;
-  padding: 12px;
-  border-radius: 12px;
+  width: 100%;
+  max-width: 420px;
+  background: var(--bg-elev);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  padding: 40px 36px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
 }
-.title { margin: 0; text-align: center; }
-.subtitle { text-align: center; color: #909399; margin: 4px 0 24px; }
-.submit { width: 100%; }
+.title {
+  font-size: 48px;
+  line-height: 1;
+  margin: 8px 0 0;
+  letter-spacing: -1px;
+}
+.title em {
+  font-style: italic;
+  color: var(--accent);
+  font-weight: 400;
+}
+.lede {
+  color: var(--ink-soft);
+  font-size: 14px;
+  margin: 0 0 16px;
+}
+.form { display: flex; flex-direction: column; gap: 18px; }
+.field { display: flex; flex-direction: column; gap: 8px; }
+.label { color: var(--ink-mute); font-size: 11px; text-transform: uppercase; letter-spacing: 0.16em; }
+.input {
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid var(--rule-soft);
+  padding: 10px 0;
+  font-family: var(--font-body);
+  font-size: 16px;
+  color: var(--ink);
+  outline: none;
+  width: 100%;
+}
+.input:focus { border-bottom-color: var(--ink); }
+.primary-btn {
+  background: var(--ink);
+  color: var(--ink-on-inverse);
+  border: 0;
+  padding: 12px 24px;
+  border-radius: var(--radius);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  cursor: pointer;
+  margin-top: 8px;
+}
+.primary-btn:hover { background: var(--accent); }
+.primary-btn:disabled { background: var(--ink-faint); cursor: not-allowed; }
+.hint { color: var(--ink-mute); font-size: 11px; margin: 8px 0 0; text-align: center; }
 </style>
