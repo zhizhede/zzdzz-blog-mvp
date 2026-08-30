@@ -25,11 +25,17 @@ func NewUserService(db *gorm.DB) *UserService {
 	return &UserService{db: db}
 }
 
-// List 返回所有用户, 不含 password_hash
+// List 返回所有用户, 不含 password_hash. IsAdmin 由 ZZDZZ_ADMIN_USERNAMES 推断回填,
+// 这样前端用户管理页可以显示 admin / reader 角色.
 func (s *UserService) List() ([]model.User, error) {
 	var users []model.User
 	if err := s.db.Order("id ASC").Find(&users).Error; err != nil {
 		return nil, err
+	}
+	admins := adminUsernames()
+	for i := range users {
+		_, isAdmin := admins[users[i].Username]
+		users[i].IsAdmin = isAdmin
 	}
 	return users, nil
 }
