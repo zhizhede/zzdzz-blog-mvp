@@ -52,6 +52,7 @@ web/src/assets/
 *.tsbuildinfo
 # 部署产物 (二进制 + dist),只在本地 staging 用,不入库
 deploy/release/blog-server/blog-server
+deploy/release/blog-server/draft-cleanup
 deploy/release/blog-server/web/
 
 # ─────────────── Agent / tooling local state ───────────────
