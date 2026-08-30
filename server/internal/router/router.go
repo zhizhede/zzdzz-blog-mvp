@@ -81,6 +81,8 @@ func New(db *gorm.DB, cfg *config.Config) *gin.Engine {
 	cat := handler.NewCategoryHandler(catSvc)
 	artSvc := service.NewArticleService(db)
 	art := handler.NewArticleHandler(artSvc)
+	tagSvc := service.NewTagService(db)
+	tag := handler.NewTagHandler(tagSvc)
 	aiSvc := service.NewAIService(db)
 	ai := handler.NewAIHandler(&cfg.AI, aiSvc)
 	userSvc := service.NewUserService(db)
@@ -118,10 +120,25 @@ func New(db *gorm.DB, cfg *config.Config) *gin.Engine {
 			// 自己 (handler 按 author_id 分支) 也可看自己的 private/draft; 其他人按 public
 			articles.GET("", handler.OptionalAuth(&cfg.JWT), art.List)
 			articles.GET("/:id", handler.OptionalAuth(&cfg.JWT), art.Get)
+			// 带标签的详情/编辑视图
+			articles.GET("/:id/full", handler.OptionalAuth(&cfg.JWT), art.GetWithTags)
 			// 写操作: 任何登录用户都可调, handler 内部按"admin 或作者本人"判断权限
 			articles.POST("", handler.RequireAuth(&cfg.JWT), art.Create)
 			articles.PUT("/:id", handler.RequireAuth(&cfg.JWT), art.Update)
 			articles.DELETE("/:id", handler.RequireAuth(&cfg.JWT), art.Delete)
+			// 草稿自动保存: 仅作者/admin, 仅 draft 文章
+			articles.PUT("/:id/autosave", handler.RequireAuth(&cfg.JWT), art.Autosave)
+			// 当前用户自己的 draft 列表
+			articles.GET("/autosave/drafts", handler.RequireAuth(&cfg.JWT), art.ListMyDrafts)
+		}
+
+		tags := api.Group("/tags")
+		{
+			// 标签列表公开, 写入需 admin
+			tags.GET("", tag.List)
+			tags.POST("", chainedAdmin(&cfg.JWT), tag.Create)
+			tags.PUT("/:id", chainedAdmin(&cfg.JWT), tag.Update)
+			tags.DELETE("/:id", chainedAdmin(&cfg.JWT), tag.Delete)
 		}
 
 		aiGroup := api.Group("/ai")
