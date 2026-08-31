@@ -10,14 +10,23 @@ const route = useRoute()
 const router = useRouter()
 const article = ref<Article | null>(null)
 const categoryName = ref('')
+const loading = ref(true)
+const notFound = ref(false)
 
 onMounted(async () => {
   const id = Number(route.params.id)
-  const res = await articleApi.getWithTags(id)
-  article.value = res.data
-  const cats = await categoryApi.list()
-  const c = cats.data?.find?.((x: Category) => x.id === res.data.category_id)
-  categoryName.value = c?.name || '未分类'
+  try {
+    const res = await articleApi.getWithTags(id)
+    article.value = res.data
+    document.title = `${res.data.title} · zzdzz blog`
+    const cats = await categoryApi.list()
+    const c = cats.data?.find?.((x: Category) => x.id === res.data.category_id)
+    categoryName.value = c?.name || '未分类'
+  } catch {
+    notFound.value = true
+  } finally {
+    loading.value = false
+  }
 })
 
 const dateStr = computed(() => {
@@ -27,10 +36,17 @@ const dateStr = computed(() => {
 </script>
 
 <template>
-  <div v-if="article" class="container-narrow detail-page">
-    <button class="back" @click="router.push('/blog')">← 返回列表</button>
+  <div class="container-narrow detail-page">
+    <button class="back" @click="router.back()">← 返回列表</button>
 
-    <IssueTag prefix="ESSAY" text="" :suffix="dateStr" />
+    <div v-if="loading" class="state">加载中…</div>
+    <div v-else-if="notFound || !article" class="state">
+      <p class="state-title">文章不存在,或尚未公开。</p>
+      <router-link to="/blog" class="state-link">去首页看看 →</router-link>
+    </div>
+
+    <template v-else>
+      <IssueTag prefix="ESSAY" text="" :suffix="dateStr" />
 
     <h1 class="display title">{{ article.title }}</h1>
 
@@ -56,6 +72,7 @@ const dateStr = computed(() => {
     <Markdown :source="article.content" />
 
     <AppFooter />
+    </template>
   </div>
 </template>
 
@@ -80,6 +97,18 @@ const dateStr = computed(() => {
   align-self: flex-start;
 }
 .back:hover { color: var(--accent); }
+.state {
+  padding: 80px 0;
+  text-align: center;
+  color: var(--ink-mute);
+}
+.state-title { margin: 0 0 16px; font-size: 16px; }
+.state-link {
+  color: var(--accent);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  text-decoration: none;
+}
 .title {
   font-size: 48px;
   line-height: 1.05;
