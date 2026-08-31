@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { onBeforeRouteLeave, useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { articleApi, categoryApi, tagApi, type Article, type Tag } from '../../api'
 import IssueTag from '../../components/IssueTag.vue'
@@ -117,6 +117,7 @@ async function doAutosave() {
       })
       lastSavedAt.value = res.data.last_autosaved_at
     }
+    dirty.value = false
     saveError.value = null
   } catch (e: any) {
     saveError.value = e?.message || 'autosave failed'
@@ -127,6 +128,20 @@ async function doAutosave() {
 
 onBeforeUnmount(() => {
   if (timer) window.clearTimeout(timer)
+  window.removeEventListener('beforeunload', onBeforeUnload)
+})
+
+const onBeforeUnload = (e: BeforeUnloadEvent) => {
+  if (dirty.value) {
+    e.preventDefault()
+    e.returnValue = ''
+  }
+}
+window.addEventListener('beforeunload', onBeforeUnload)
+
+onBeforeRouteLeave(() => {
+  if (!dirty.value) return true
+  return window.confirm('有未保存的改动,离开可能会丢失。确定离开吗?')
 })
 
 function onInput() {
@@ -154,6 +169,7 @@ async function handlePublish() {
     tag_ids: form.value.tag_ids,
   })
   clearLocalDraft()
+  dirty.value = false
   ElMessage.success('已发布')
   router.replace(`/admin/articles/${res.data.id}/edit`)
 }
