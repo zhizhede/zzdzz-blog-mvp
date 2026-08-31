@@ -15,7 +15,7 @@ const inSpace = computed(() => route.path.startsWith('/space'))
 const inAdmin = computed(() => route.path.startsWith('/admin'))
 
 function goHome() {
-  router.push('/')
+  router.push('/blog')
 }
 function toggleTheme() {
   theme.toggle()
@@ -33,11 +33,6 @@ function handleCommand(cmd: string) {
   }
   if (cmd === 'space') {
     router.push('/space/notes')
-    return
-  }
-  if (cmd === 'blog') {
-    router.push('/')
-    return
   }
 }
 </script>
@@ -52,7 +47,7 @@ function handleCommand(cmd: string) {
       </a>
 
       <nav class="nav">
-        <router-link to="/" class="nav-item">阅读</router-link>
+        <router-link to="/blog" class="nav-item">阅读</router-link>
         <router-link v-if="user.token" to="/space/notes" class="nav-item">
           空间
         </router-link>
@@ -79,10 +74,6 @@ function handleCommand(cmd: string) {
                 <el-dropdown-item v-if="user.isAdmin && !inAdmin" command="admin" divided>
                   前往后台
                 </el-dropdown-item>
-                <el-dropdown-item v-if="user.token && !route.path.startsWith('/')" command="blog">
-                  公开博客
-                </el-dropdown-item>
-                <el-dropdown-item v-if="inSpace" command="blog">公开博客</el-dropdown-item>
                 <el-dropdown-item command="logout" divided>退出</el-dropdown-item>
               </el-dropdown-menu>
             </template>
