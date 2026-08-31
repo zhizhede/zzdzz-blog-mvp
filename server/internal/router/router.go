@@ -1,6 +1,8 @@
 package router
 
 import (
+	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -55,10 +57,15 @@ func New(db *gorm.DB, cfg *config.Config) *gin.Engine {
 	r.GET("/", func(c *gin.Context) {
 		c.File("./web/index.html")
 	})
-	// SPA fallback: 非 /api 的路径都返回 index.html,让前端路由接管
+	// SPA fallback: 非 /api 的路径优先匹配 web/ 下的真实文件 (favicon 等),否则返回 index.html
 	r.NoRoute(func(c *gin.Context) {
-		if len(c.Request.URL.Path) >= 5 && c.Request.URL.Path[:5] == "/api/" {
+		if strings.HasPrefix(c.Request.URL.Path, "/api/") {
 			c.JSON(404, gin.H{"code": 404, "message": "route not found"})
+			return
+		}
+		p := filepath.Join("./web", filepath.Clean("/"+c.Request.URL.Path))
+		if st, err := os.Stat(p); err == nil && !st.IsDir() {
+			c.File(p)
 			return
 		}
 		c.File("./web/index.html")
