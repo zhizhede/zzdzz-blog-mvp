@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { articleApi, categoryApi, tagApi, type Article, type Category, type TagWithCount } from '../../api'
 import IssueTag from '../../components/IssueTag.vue'
@@ -12,6 +12,10 @@ const categories = ref<Category[]>([])
 const tags = ref<TagWithCount[]>([])
 const filterCat = ref(0)
 const filterTag = ref(0)
+const page = ref(1)
+const total = ref(0)
+const pageSize = 20
+const loading = ref(false)
 
 const issueNo = computed(() => {
   const d = new Date()
@@ -24,38 +28,76 @@ function WString(n: number) {
 }
 
 const fetchData = async () => {
-  const [a, c, t] = await Promise.all([
-    articleApi.list({
-      page: 1,
-      size: 50,
-      category_id: filterCat.value || undefined,
-      tag_id: filterTag.value || undefined,
-    }),
-    categoryApi.list(),
-    tagApi.list(),
-  ])
-  articles.value = a.data.items ?? []
-  categories.value = c.data ?? []
-  tags.value = t.data ?? []
+  loading.value = true
+  try {
+    const [a, c, t] = await Promise.all([
+      articleApi.list({
+        page: page.value,
+        size: pageSize,
+        category_id: filterCat.value || undefined,
+        tag_id: filterTag.value || undefined,
+      }),
+      categoryApi.list(),
+      tagApi.list(),
+    ])
+    articles.value = a.data.items ?? []
+    total.value = a.data.total ?? 0
+    categories.value = c.data ?? []
+    tags.value = t.data ?? []
+  } finally {
+    loading.value = false
+  }
 }
 
-const filtered = computed(() => {
-  let r = articles.value
-  if (filterCat.value) r = r.filter((a) => a.category_id === filterCat.value)
-  if (filterTag.value) r = r.filter((a) => (a.tag_ids ?? []).includes(filterTag.value))
-  return r
-})
+const syncQuery = () => {
+  router.replace({
+    query: {
+      ...(filterCat.value && { cat: String(filterCat.value) }),
+      ...(filterTag.value && { tag_id: String(filterTag.value) }),
+      ...(page.value > 1 && { page: String(page.value) }),
+    },
+  })
+}
+
+// 服务端已按分类/标签过滤,前端不再二次过滤
+const filtered = computed(() => articles.value)
+
+const totalPages = computed(() => Math.max(1, Math.ceil(total.value / pageSize)))
+
+const setFilter = (patch: { cat?: number; tag?: number }) => {
+  if (patch.cat !== undefined) filterCat.value = patch.cat
+  if (patch.tag !== undefined) filterTag.value = patch.tag
+  page.value = 1
+  syncQuery()
+  fetchData()
+}
+
+const goPage = (p: number) => {
+  page.value = p
+  syncQuery()
+  fetchData()
+  window.scrollTo({ top: 0 })
+}
 
 const categoryName = (id: number) =>
   categories.value.find((c) => c.id === id)?.name || '未分类'
-const summary = (a: Article) => a.summary || a.content.slice(0, 120).replace(/\n/g, ' ')
+// 没写摘要时取正文前 200 字,去掉 markdown 标记和换行
+const summary = (a: Article) =>
+  a.summary ||
+  a.content
+    .replace(/```[\s\S]*?```/g, ' ')
+    .replace(/[#>*`~\[\]!-]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, 200)
+const readMinutes = (a: Article) => Math.max(1, Math.round(a.content.length / 400))
 
 onMounted(() => {
-  const q = route.query.tag_id
-  if (q) filterTag.value = Number(q) || 0
+  filterCat.value = Number(route.query.cat) || 0
+  filterTag.value = Number(route.query.tag_id) || 0
+  page.value = Number(route.query.page) || 1
   fetchData()
 })
-watch([filterCat, filterTag], () => fetchData())
 </script>
 
 <template>
@@ -74,33 +116,36 @@ watch([filterCat, filterTag], () => fetchData())
     <section class="filters">
       <p class="mono filter-label">FILTER · 分类</p>
       <div class="cat-row">
-        <button :class="['cat', !filterCat && 'active']" @click="filterCat = 0">全部</button>
+        <button :class="['cat', !filterCat && 'active']" :aria-pressed="!filterCat" @click="setFilter({ cat: 0 })">全部</button>
         <button
           v-for="c in categories"
           :key="c.id"
           :class="['cat', filterCat === c.id && 'active']"
-          @click="filterCat = c.id"
+          :aria-pressed="filterCat === c.id"
+          @click="setFilter({ cat: c.id })"
         >{{ c.name }}</button>
       </div>
 
       <p class="mono filter-label">FILTER · 标签</p>
-      <TagCloud :active-tag-id="filterTag" @select="(id) => (filterTag = id ?? 0)" />
+      <TagCloud :active-tag-id="filterTag" @select="(id) => setFilter({ tag: id ?? 0 })" />
     </section>
 
     <hr class="hairline" />
 
-    <section class="list">
-      <article
+    <section class="list" :class="{ loading: loading }">
+      <router-link
         v-for="a in filtered"
         :key="a.id"
+        :to="`/blog/a/${a.id}`"
         class="post-card"
-        @click="router.push(`/blog/a/${a.id}`)"
       >
         <h2 class="post-title display">{{ a.title }}</h2>
         <div class="post-meta">
           <span class="cat-tag">{{ categoryName(a.category_id) }}</span>
           <span class="dot" />
           <span class="mono">{{ new Date(a.created_at).toLocaleDateString() }}</span>
+          <span class="dot" />
+          <span class="mono">约 {{ readMinutes(a) }} 分钟</span>
           <span class="dot" />
           <span class="mono">{{ a.view_count }} 阅读</span>
           <template v-if="(a.tag_ids ?? []).length">
@@ -113,9 +158,16 @@ watch([filterCat, filterTag], () => fetchData())
           </template>
         </div>
         <p class="post-excerpt">{{ summary(a) }}</p>
-      </article>
-      <div v-if="!filtered.length" class="empty">这一过滤条件下还没有内容。</div>
+      </router-link>
+      <div v-if="!filtered.length && !loading" class="empty">这一过滤条件下还没有内容。</div>
+      <div v-if="loading" class="empty">加载中…</div>
     </section>
+
+    <div v-if="totalPages > 1" class="pager">
+      <button class="pager-btn" :disabled="page <= 1" @click="goPage(page - 1)">← 上一页</button>
+      <span class="mono pager-info">第 {{ page }} / {{ totalPages }} 页 · 共 {{ total }} 篇</span>
+      <button class="pager-btn" :disabled="page >= totalPages" @click="goPage(page + 1)">下一页 →</button>
+    </div>
   </div>
 </template>
 
@@ -168,23 +220,25 @@ watch([filterCat, filterTag], () => fetchData())
 .hairline { border: 0; border-top: 1px solid var(--rule); }
 .list { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
 .post-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  text-decoration: none;
   background: var(--bg-elev);
   border: 1px solid var(--rule-soft);
   border-radius: var(--radius);
   padding: 24px;
   cursor: pointer;
-  transition: all var(--transition);
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
+  transition: transform var(--transition), border-color var(--transition), box-shadow var(--transition);
 }
 .post-card:hover {
   border-color: var(--ink);
   transform: translateY(-2px);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.06);
 }
 .post-title {
   font-size: 24px;
-  line-height: 1.2;
+  line-height: 1.25;
   margin: 0;
   color: var(--ink);
 }
@@ -217,11 +271,11 @@ watch([filterCat, filterTag], () => fetchData())
 }
 .post-excerpt {
   color: var(--ink-soft);
-  font-size: 14px;
-  line-height: 1.7;
+  font-size: 14.5px;
+  line-height: 1.8;
   margin: 0;
   display: -webkit-box;
-  -webkit-line-clamp: 3;
+  -webkit-line-clamp: 4;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
@@ -231,6 +285,27 @@ watch([filterCat, filterTag], () => fetchData())
   padding: 80px 0;
   color: var(--ink-mute);
 }
+.pager {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 24px;
+  margin-top: 16px;
+  border-top: 1px solid var(--rule);
+}
+.pager-btn {
+  background: transparent;
+  border: 1px solid var(--rule-soft);
+  padding: 8px 16px;
+  border-radius: var(--radius);
+  font-family: var(--font-body);
+  font-size: 13px;
+  color: var(--ink-soft);
+  cursor: pointer;
+}
+.pager-btn:hover:not(:disabled) { color: var(--ink); border-color: var(--ink-mute); }
+.pager-btn:disabled { color: var(--ink-faint); cursor: not-allowed; }
+.pager-info { color: var(--ink-mute); font-size: 12px; }
 @media (max-width: 760px) {
   .hero-title { font-size: 36px; }
   .list { grid-template-columns: 1fr; }
