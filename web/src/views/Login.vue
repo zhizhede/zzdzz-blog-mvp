@@ -10,7 +10,7 @@ const router = useRouter()
 const route = useRoute()
 const userStore = useUserStore()
 
-const form = ref({ username: 'admin', password: '123456' })
+const form = ref({ username: '', password: '' })
 const loading = ref(false)
 
 const handleLogin = async () => {
@@ -67,7 +67,6 @@ const handleLogin = async () => {
         </button>
       </form>
 
-      <p class="hint mono">默认 admin / 123456</p>
     </div>
   </div>
 </template>
@@ -138,5 +137,4 @@ const handleLogin = async () => {
 }
 .primary-btn:hover { background: var(--accent); }
 .primary-btn:disabled { background: var(--ink-faint); cursor: not-allowed; }
-.hint { color: var(--ink-mute); font-size: 11px; margin: 8px 0 0; text-align: center; }
 </style>
