@@ -111,6 +111,7 @@ onMounted(() => {
         这里收录的是 zzdzz 写过的笔记与代码随想。
         一周一篇,每篇尽量写完。
       </p>
+      <router-link to="/admin/articles/new" class="publish-btn">发布文章</router-link>
     </section>
 
     <section class="filters">
@@ -198,6 +199,21 @@ onMounted(() => {
   max-width: 540px;
   margin: 0;
 }
+.publish-btn {
+  align-self: flex-start;
+  background: var(--ink);
+  color: var(--ink-on-inverse);
+  border-radius: var(--radius);
+  padding: 10px 22px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background var(--transition);
+}
+.publish-btn:hover { background: var(--accent); color: var(--accent-ink); }
 .filters { display: flex; flex-direction: column; gap: 10px; margin-bottom: 32px; }
 .filter-label { margin: 12px 0 0; color: var(--ink-mute); }
 .cat-row { display: flex; flex-wrap: wrap; gap: 6px; }
