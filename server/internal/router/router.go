@@ -46,17 +46,31 @@ func authHasBearer(h string) bool {
 	return len(h) >= 7 && h[:7] == "Bearer "
 }
 
-func New(db *gorm.DB, cfg *config.Config) *gin.Engine {
+func New(db *gorm.DB, cfg *config.Config) (*gin.Engine, error) {
 	r := gin.New()
 	r.Use(gin.Logger(), gin.Recovery())
 
 	// 前端静态文件 (web/dist 在二进制同级目录)
 	r.Static("/assets", "./web/assets")
-	r.StaticFile("/favicon.svg", "./web/favicon.svg")
 	r.StaticFile("/icons.svg", "./web/icons.svg")
-	r.GET("/", func(c *gin.Context) {
-		c.File("./web/index.html")
-	})
+
+	// 站点设置: 自定义 favicon (服务动态文件 + 首页版本注入)
+	iconSvc, err := service.NewIconService(cfg.Site.IconDir)
+	if err != nil {
+		return nil, err
+	}
+	site := handler.NewSiteHandler(iconSvc)
+
+	// favicon 系列一律走 site handler: 有自定义图标优先, 否则回退 web/ 内置
+	faviconFiles := []string{
+		"favicon.svg", "favicon.ico", "apple-touch-icon.png",
+		"favicon-32.png", "favicon-48.png", "favicon-64.png",
+		"favicon-128.png", "favicon-256.png", "favicon-512.png",
+	}
+	for _, f := range faviconFiles {
+		r.GET("/"+f, site.ServeIconFile("./web", f))
+	}
+	r.GET("/", site.ServeIndex("./web"))
 	// SPA fallback: 非 /api 的路径优先匹配 web/ 下的真实文件 (favicon 等),否则返回 index.html
 	r.NoRoute(func(c *gin.Context) {
 		if strings.HasPrefix(c.Request.URL.Path, "/api/") {
@@ -68,7 +82,7 @@ func New(db *gorm.DB, cfg *config.Config) *gin.Engine {
 			c.File(p)
 			return
 		}
-		c.File("./web/index.html")
+		site.ServeIndex("./web")(c)
 	})
 
 	corsCfg := cors.Config{
@@ -173,7 +187,16 @@ func New(db *gorm.DB, cfg *config.Config) *gin.Engine {
 			users.PUT("/:id/password", userH.ChangePassword)
 			users.PATCH("/:id/active", userH.SetActive)
 		}
+
+		// 站点设置: 仅 admin
+		siteGroup := api.Group("/site")
+		siteGroup.Use(chainedAdmin(&cfg.JWT))
+		{
+			siteGroup.PUT("/icon", site.Upload)
+			siteGroup.DELETE("/icon", site.Reset)
+			siteGroup.GET("/icon/meta", site.Meta)
+		}
 	}
 
-	return r
+	return r, nil
 }

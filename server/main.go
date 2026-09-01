@@ -48,7 +48,10 @@ func main() {
 		log.Fatalf("connect db: %v", err)
 	}
 
-	r := router.New(db, cfg)
+	r, err := router.New(db, cfg)
+	if err != nil {
+		log.Fatalf("init router: %v", err)
+	}
 
 	addr := fmt.Sprintf(":%d", cfg.Server.Port)
 	log.Printf("server listening on %s (mode=%s)", addr, cfg.Server.Mode)

@@ -27,6 +27,7 @@ const routes = [
       { path: 'admin/categories', component: () => import('../views/admin/CategoryManage.vue') },
       { path: 'admin/users', component: () => import('../views/admin/UserManage.vue') },
       { path: 'admin/ai', component: () => import('../views/admin/AICenter.vue') },
+      { path: 'admin/settings', component: () => import('../views/admin/SiteSettings.vue') },
     ],
   },
   {

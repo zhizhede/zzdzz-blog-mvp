@@ -6,6 +6,7 @@ import {
   Folder,
   User,
   ChatDotRound,
+  Setting,
 } from '@element-plus/icons-vue'
 import AppHeader from '../components/AppHeader.vue'
 import IssueTag from '../components/IssueTag.vue'
@@ -54,6 +55,13 @@ const today = new Date().toISOString().slice(0, 10).replace(/-/g, '/')
           >
             <el-icon><ChatDotRound /></el-icon><span>AI 对话</span>
             <em class="mono">llm</em>
+          </button>
+          <button
+            :class="['side-item', active === '/admin/settings' && 'active']"
+            @click="router.push('/admin/settings')"
+          >
+            <el-icon><Setting /></el-icon><span>站点设置</span>
+            <em class="mono">site</em>
           </button>
         </nav>
 

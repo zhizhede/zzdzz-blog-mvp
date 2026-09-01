@@ -49,12 +49,19 @@ type CORSConfig struct {
 	AllowOrigins []string `mapstructure:"allow_origins"`
 }
 
+// SiteConfig 站点级资源配置. IconDir 存自定义 favicon 全套文件,
+// 必须位于前端 dist 部署路径之外, 避免被 deploy 覆盖.
+type SiteConfig struct {
+	IconDir string `mapstructure:"icon_dir"`
+}
+
 type Config struct {
 	Server   ServerConfig   `mapstructure:"server"`
 	Database DatabaseConfig `mapstructure:"database"`
 	JWT      JWTConfig      `mapstructure:"jwt"`
 	AI       AIConfig       `mapstructure:"ai"`
 	CORS     CORSConfig     `mapstructure:"cors"`
+	Site     SiteConfig     `mapstructure:"site"`
 }
 
 var globalCfg *Config
@@ -74,6 +81,9 @@ func Load(path string) (*Config, error) {
 	var cfg Config
 	if err := v.Unmarshal(&cfg); err != nil {
 		return nil, fmt.Errorf("unmarshal config: %w", err)
+	}
+	if cfg.Site.IconDir == "" {
+		cfg.Site.IconDir = "./data/icon"
 	}
 
 	globalCfg = &cfg
