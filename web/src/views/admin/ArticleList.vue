@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { ElMessageBox } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import { articleApi, categoryApi, type Article, type Category } from '../../api'
 import IssueTag from '../../components/IssueTag.vue'
 
@@ -41,6 +41,18 @@ const visLabel = (v: string) =>
 
 const visClass = (v: string) =>
   v === 'public' ? 'vis-public' : v === 'private' ? 'vis-private' : 'vis-draft'
+
+// 可见性随时可改: 点击 pill 在 public -> private -> draft 之间循环
+const cycleVis = async (row: Article) => {
+  const order: Article['visibility'][] = ['public', 'private', 'draft']
+  const next = order[(order.indexOf(row.visibility) + 1) % order.length]
+  try {
+    await articleApi.setVisibility(row.id, next)
+    ElMessage.success(`可见性已改为「${visLabel(next)}」`)
+  } finally {
+    fetchList()
+  }
+}
 
 const handleDelete = async (row: Article) => {
   await ElMessageBox.confirm(`确认删除「${row.title}」?`, '提示', { type: 'warning' })
@@ -112,9 +124,13 @@ onMounted(() => {
         <span class="cell c-id mono">#{{ row.id }}</span>
         <span class="cell c-title">{{ row.title }}</span>
         <span class="cell c-cat">{{ categoryName(row.category_id) }}</span>
-        <span :class="['cell c-vis vis-pill', visClass(row.visibility)]">
+        <button
+          :class="['cell c-vis vis-pill clickable', visClass(row.visibility)]"
+          :title="`点击切换可见性 (当前: ${visLabel(row.visibility)})`"
+          @click="cycleVis(row)"
+        >
           {{ visLabel(row.visibility) }}
-        </span>
+        </button>
         <span class="cell c-stat mono">{{ row.view_count }}</span>
         <span class="cell c-date mono">{{ new Date(row.created_at).toLocaleDateString() }}</span>
         <span class="cell c-act">
@@ -214,6 +230,8 @@ onMounted(() => {
 .vis-public { background: var(--accent); color: var(--accent-ink); }
 .vis-private { background: var(--bg-sunken); color: var(--ink-soft); border-color: var(--rule); }
 .vis-draft { background: transparent; color: var(--ink-mute); border-color: var(--rule-soft); border-style: dashed; }
+.vis-pill.clickable { cursor: pointer; transition: all var(--transition); }
+.vis-pill.clickable:hover { filter: brightness(0.92); outline: 1px dashed var(--ink-mute); }
 
 .text-btn {
   background: transparent;

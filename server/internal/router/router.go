@@ -135,6 +135,8 @@ func New(db *gorm.DB, cfg *config.Config) *gin.Engine {
 			articles.DELETE("/:id", handler.RequireAuth(&cfg.JWT), art.Delete)
 			// 草稿自动保存: 仅作者/admin, 仅 draft 文章
 			articles.PUT("/:id/autosave", handler.RequireAuth(&cfg.JWT), art.Autosave)
+			// 可见性单独改: 任何状态(public/private/draft)都允许, 仅作者/admin
+			articles.PATCH("/:id/visibility", handler.RequireAuth(&cfg.JWT), art.SetVisibility)
 			// 当前用户自己的 draft 列表
 			articles.GET("/autosave/drafts", handler.RequireAuth(&cfg.JWT), art.ListMyDrafts)
 		}

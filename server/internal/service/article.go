@@ -231,6 +231,26 @@ func (s *ArticleService) Update(id uint64, in ArticleInput, actor Actor) (*model
 	return &a, nil
 }
 
+// SetVisibility 单独改可见性: 不管文章当前是 public/private/draft 哪种状态,
+// 只要是作者本人或 admin, 任何时候都能改. 只动 visibility 一列, 不碰正文/分类/标签.
+func (s *ArticleService) SetVisibility(id uint64, visibility string, actor Actor) (*model.Article, error) {
+	var a model.Article
+	if err := s.db.First(&a, id).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, ErrArticleNotFound
+		}
+		return nil, err
+	}
+	if !canEdit(a, actor) {
+		return nil, ErrArticleNotOwned
+	}
+	a.Visibility = normalizeVisibility(visibility)
+	if err := s.db.Model(&a).UpdateColumn("visibility", a.Visibility).Error; err != nil {
+		return nil, err
+	}
+	return &a, nil
+}
+
 // replaceArticleTags 用事务把 article_id 关联的 tag 全部替换为 tagIDs.
 // 空切片表示清空(取消所有标签).
 func (s *ArticleService) replaceArticleTags(articleID uint64, tagIDs []uint64) error {

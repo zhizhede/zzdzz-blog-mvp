@@ -108,6 +108,9 @@ async function doAutosave() {
       draftId.value = res.data.id
       window.history.replaceState({}, '', `/admin/articles/${res.data.id}/edit`)
       lastSavedAt.value = res.data.last_autosaved_at
+    } else if (form.value.visibility !== 'draft') {
+      // 非草稿文章不支持 autosave 接口(后端仅接受 draft), 跳过;
+      // 改动(含可见性)由「发布/保存」按钮走 Update 一次性提交, dirty 保持 true 以触发离开提醒
     } else {
       const res = await articleApi.autosave(draftId.value, {
         title: form.value.title,

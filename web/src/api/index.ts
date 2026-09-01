@@ -124,6 +124,8 @@ export const articleApi = {
     > & { visibility?: Article['visibility']; tag_ids?: number[] },
   ) => http.put<any, ApiResponse<Article>>(`/articles/${id}`, data),
   remove: (id: number) => http.delete<any, ApiResponse<null>>(`/articles/${id}`),
+  setVisibility: (id: number, visibility: Article['visibility']) =>
+    http.patch<any, ApiResponse<Article>>(`/articles/${id}/visibility`, { visibility }),
   autosave: (id: number, data: AutosaveInput) =>
     http.put<any, ApiResponse<AutosaveResult>>(`/articles/${id}/autosave`, data),
   listMyDrafts: () =>

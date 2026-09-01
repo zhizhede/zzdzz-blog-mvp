@@ -228,6 +228,35 @@ func (h *ArticleHandler) Autosave(c *gin.Context) {
 	})
 }
 
+// SetVisibility 任何可见性状态下都允许修改 visibility, 只要作者是本人或 admin.
+func (h *ArticleHandler) SetVisibility(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		response.BadRequest(c, "invalid id")
+		return
+	}
+	var req struct {
+		Visibility string `json:"visibility" binding:"required,oneof=public private draft"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, err.Error())
+		return
+	}
+	a, err := h.svc.SetVisibility(id, req.Visibility, actorOf(c))
+	if err != nil {
+		switch {
+		case errors.Is(err, service.ErrArticleNotFound):
+			response.Fail(c, 404, 4004, "article not found")
+		case errors.Is(err, service.ErrArticleNotOwned):
+			response.Fail(c, 403, 4003, "not article owner")
+		default:
+			response.ServerError(c, err.Error())
+		}
+		return
+	}
+	response.OK(c, a)
+}
+
 // ListMyDrafts 列出当前登录用户的 draft, 按 last_autosaved_at DESC.
 func (h *ArticleHandler) ListMyDrafts(c *gin.Context) {
 	uid := userIDOf(c)
