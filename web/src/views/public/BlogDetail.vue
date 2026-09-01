@@ -71,6 +71,19 @@ const dateStr = computed(() => {
 
     <Markdown :source="article.content" />
 
+    <div v-if="article.tags && article.tags.length" class="end-tags">
+      <hr class="hairline" />
+      <p class="mono end-tags-label">TAGS · 本文标签</p>
+      <div class="end-tags-row">
+        <router-link
+          v-for="t in article.tags"
+          :key="t.id"
+          :to="`/blog?tag_id=${t.id}`"
+          class="tag-chip"
+        >#{{ t.name }}</router-link>
+      </div>
+    </div>
+
     <AppFooter />
     </template>
   </div>
@@ -163,6 +176,16 @@ const dateStr = computed(() => {
   margin: 0 0 24px;
   border-radius: var(--radius);
 }
+.end-tags { margin-top: 48px; display: flex; flex-direction: column; gap: 12px; }
+.hairline { border: 0; border-top: 1px solid var(--rule); margin: 0; }
+.end-tags-label {
+  margin: 0;
+  color: var(--ink-mute);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+}
+.end-tags-row { display: flex; flex-wrap: wrap; gap: 8px; }
 @media (max-width: 760px) {
   .title { font-size: 32px; }
 }
