@@ -42,6 +42,8 @@ ls -1dt $DIR/web.bak-* 2>/dev/null | tail -n +4 | xargs -r rm -rf
 chmod +x /tmp/blog-server.new && mv -f /tmp/blog-server.new $DIR/blog-server
 rm -rf $DIR/web && mkdir -p $DIR/web && tar xzf /tmp/web-dist.tgz -C $DIR/web
 rm -rf /www/wwwroot/blog-ui/dist && mkdir -p /www/wwwroot/blog-ui/dist && tar xzf /tmp/web-dist.tgz -C /www/wwwroot/blog-ui/dist
+# data/ 存站点自定义图标等持久文件, 部署只保证目录存在, 绝不覆盖内容
+mkdir -p $DIR/data/icon
 chown -R www:www $DIR /www/wwwroot/blog-ui
 
 PID=$(ps -ef | grep '\./blog-server' | grep -v grep | awk '{print $2}' | head -1)
