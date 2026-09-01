@@ -9,12 +9,12 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(__dirname, '..');
 const SRC = resolve(ROOT, 'pictures/zzdzz-blog-page.png');
 
-// 原图 1395x1395，直接整体使用，不裁剪
+// 原图直接整体使用, 裁剪窗口按图片实际边长(方形)取, 兼容不同尺寸源图
 const CROP = {
   left: 0,
   top: 0,
-  width: 1395,
-  height: 1395,
+  width: 0,
+  height: 0,
 };
 
 const SIZES = [32, 48, 64, 128, 256, 512];
@@ -23,6 +23,9 @@ async function build() {
   const srcBuf = readFileSync(SRC);
   const meta = await sharp(srcBuf).metadata();
   console.log('source:', meta.width, 'x', meta.height);
+  const side = Math.min(meta.width, meta.height);
+  CROP.width = side;
+  CROP.height = side;
 
   // 1) 生成中间方形 PNG（512px，作为裁剪后的源）
   const square512 = await sharp(srcBuf)
