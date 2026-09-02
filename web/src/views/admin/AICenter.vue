@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { nextTick, onMounted, ref } from 'vue'
+import { nextTick, onMounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { aiApi, type AIConversation, type AIMessage } from '../../api/ai'
@@ -113,12 +113,10 @@ const send = async () => {
 
   messages.value.push({ role: 'user', content: text })
   input.value = ''
-  const aiMsg: Msg = { role: 'assistant', content: '', pending: true }
+  // reactive 而非普通对象: delta 累积进状态驱动渲染, 不做任何直接 DOM 补丁
+  const aiMsg = reactive<Msg>({ role: 'assistant', content: '', pending: true })
   messages.value.push(aiMsg)
   await scrollToBottom()
-  let bubbleEl: HTMLElement | null = null
-  await nextTick()
-  bubbleEl = document.querySelector<HTMLElement>('.msg.assistant:last-child .bubble')
   sending.value = true
 
   try {
@@ -157,16 +155,11 @@ const send = async () => {
           const obj = JSON.parse(payload)
           if (obj.error) {
             aiMsg.content = `错误: ${obj.error}`
-            if (bubbleEl && bubbleEl.firstChild) {
-              bubbleEl.firstChild.nodeValue = aiMsg.content
-            }
           } else if (obj.sources) {
-            // 召回引用来源, 早于 delta 到达; 统一在流结束后随消息一起渲染
+            // 召回引用来源, 早于 delta 到达
             aiMsg.sources = obj.sources
           } else if (obj.delta) {
-            if (bubbleEl && bubbleEl.firstChild) {
-              bubbleEl.firstChild.nodeValue += obj.delta
-            }
+            aiMsg.content += obj.delta
           }
         } catch {}
       }
