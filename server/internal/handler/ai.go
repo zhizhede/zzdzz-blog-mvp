@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"strconv"
 
@@ -21,10 +22,12 @@ import (
 type AIHandler struct {
 	cfg *config.AIConfig
 	svc *service.AIService
+	// recall AI 回顾服务, 可为 nil(未启用); Enabled() 内部判空
+	recall *service.RecallService
 }
 
-func NewAIHandler(cfg *config.AIConfig, svc *service.AIService) *AIHandler {
-	return &AIHandler{cfg: cfg, svc: svc}
+func NewAIHandler(cfg *config.AIConfig, svc *service.AIService, recall *service.RecallService) *AIHandler {
+	return &AIHandler{cfg: cfg, svc: svc, recall: recall}
 }
 
 // -------------------- 会话管理 --------------------
@@ -171,6 +174,29 @@ func (h *AIHandler) SendMessage(c *gin.Context) {
 		})
 	}
 
+	// 2.5 AI 回顾: 按可见性检索用户写过的内容, 无感注入上下文.
+	// 任何失败都静默降级为普通对话, 不影响主流程(设计见 doc/v0.3-tech-design.md §6).
+	var recallSources []service.RecallSource
+	if h.recall.Enabled() {
+		adminFlag := false
+		if v, ok := c.Get("is_admin"); ok {
+			adminFlag, _ = v.(bool)
+		}
+		prompt, sources, err := h.recall.RecallForQuery(
+			c.Request.Context(),
+			service.AccessQuery{UserID: uid, IsAdmin: adminFlag},
+			req.Content,
+		)
+		if err != nil {
+			log.Printf("[recall] search failed, degrade to plain chat: %v", err)
+		} else if len(sources) > 0 {
+			llmMsgs = append([]openai.ChatCompletionMessage{
+				{Role: "system", Content: prompt},
+			}, llmMsgs...)
+			recallSources = sources
+		}
+	}
+
 	// 3. assistant 占位行
 	assistantID, err := h.svc.CreateAssistantPlaceholder(convID)
 	if err != nil {
@@ -179,7 +205,7 @@ func (h *AIHandler) SendMessage(c *gin.Context) {
 	}
 
 	// 4. SSE 流式
-	h.streamChatWithPersist(c, uid, convID, assistantID, llmMsgs)
+	h.streamChatWithPersist(c, uid, convID, assistantID, llmMsgs, recallSources)
 }
 
 // -------------------- 旧接口（保留兼容）--------------------
@@ -306,7 +332,7 @@ func (h *AIHandler) streamChat(c *gin.Context, client *openai.Client, msgs []ope
 // streamChatWithPersist 流式版,每个 chunk 同时:
 //   - 推 SSE 给前端
 //   - UPDATE 数据库(content || delta)
-func (h *AIHandler) streamChatWithPersist(c *gin.Context, userID, convID, assistantID uint64, msgs []openai.ChatCompletionMessage) {
+func (h *AIHandler) streamChatWithPersist(c *gin.Context, userID, convID, assistantID uint64, msgs []openai.ChatCompletionMessage, recallSources []service.RecallSource) {
 	c.Writer.Header().Set("Content-Type", "text/event-stream")
 	c.Writer.Header().Set("Cache-Control", "no-cache")
 	c.Writer.Header().Set("Connection", "keep-alive")
@@ -316,6 +342,14 @@ func (h *AIHandler) streamChatWithPersist(c *gin.Context, userID, convID, assist
 	if !ok {
 		writeSSEError(c.Writer, errors.New("streaming unsupported"))
 		return
+	}
+
+	// 引用来源作为首个 SSE 事件推给前端, 早于所有 delta.
+	// 前端按 JSON 字段分支解析, 旧前端不认识 sources 字段会自然忽略, 向后兼容.
+	if len(recallSources) > 0 {
+		payload, _ := json.Marshal(gin.H{"sources": recallSources})
+		fmt.Fprintf(c.Writer, "data: %s\n\n", payload)
+		flusher.Flush()
 	}
 
 	client := h.openaiClient()

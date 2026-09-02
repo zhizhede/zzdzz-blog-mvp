@@ -1,6 +1,7 @@
 package router
 
 import (
+	"log"
 	"os"
 	"path/filepath"
 	"strings"
@@ -105,7 +106,30 @@ func New(db *gorm.DB, cfg *config.Config) (*gin.Engine, error) {
 	tagSvc := service.NewTagService(db)
 	tag := handler.NewTagHandler(tagSvc)
 	aiSvc := service.NewAIService(db)
-	ai := handler.NewAIHandler(&cfg.AI, aiSvc)
+
+	// AI 回顾(RAG): embedding 配置齐全才启用; 缺配置或 recall.enabled=false 时
+	// recallSvc 为 nil, 对话自动退化为普通聊天, 不报错(设计见 doc/v0.3-tech-design.md §4).
+	var recallSvc *service.RecallService
+	if cfg.AI.Recall.Enabled {
+		embed, err := service.NewOpenAIEmbedding(
+			cfg.AI.Embedding.BaseURL, cfg.AI.Embedding.APIKey, cfg.AI.Embedding.Model, cfg.AI.Embedding.Dims,
+			cfg.AI.Embedding.Asymmetric, cfg.AI.Embedding.Style,
+		)
+		if err != nil {
+			// 配置写了半截属于配置错误, fail fast; 全留空则视为有意禁用
+			if cfg.AI.Embedding.BaseURL != "" || cfg.AI.Embedding.APIKey != "" || cfg.AI.Embedding.Model != "" {
+				return nil, err
+			}
+			log.Printf("[recall] embedding not configured, recall disabled: %v", err)
+		} else {
+			recallSvc = service.NewRecallService(db, embed, cfg.AI.Recall)
+			artSvc.SetRecall(recallSvc)
+			if err := recallSvc.PruneByScope(); err != nil {
+				log.Printf("[recall] prune by scope failed: %v", err)
+			}
+		}
+	}
+	ai := handler.NewAIHandler(&cfg.AI, aiSvc, recallSvc)
 	userSvc := service.NewUserService(db)
 	userH := handler.NewUserHandler(userSvc)
 
