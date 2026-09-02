@@ -24,6 +24,19 @@ ai:
   api_key: "YOUR_OPENAI_COMPATIBLE_API_KEY"
   model: "MiniMax-M3"
   enabled: true
+  # AI 回顾(RAG): 对话时无感召回用户写过的内容, 见 doc/v0.3-tech-design.md
+  embedding:
+    base_url: ""     # OpenAI 兼容 embedding 接口; 留空则整个回顾功能静默禁用
+    api_key: ""
+    model: ""        # 如 MiniMax embo-01 / SiliconFlow bge-m3, 向量维度须为 1536(embo-01 实测值)
+    dims: 1536       # 必须与 migrations/0009 中 vector 列维度一致
+    asymmetric: false  # MiniMax embo-01 等非对称模型置 true(type=db/query); 其余留 false
+    style: "openai"    # "openai"=标准兼容格式; "minimax"=MiniMax 原生格式(texts/vectors)
+  recall:
+    enabled: true
+    top_k: 5
+    min_score: 0.45  # cosine 相似度低于该值不注入上下文, 闲聊行为不变
+    index_private: true  # 是否索引私人笔记; draft 永不入索引
 
 cors:
   allow_origins:

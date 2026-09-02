@@ -1,7 +1,9 @@
 package service
 
 import (
+	"context"
 	"errors"
+	"log"
 	"time"
 
 	"gorm.io/gorm"
@@ -27,10 +29,59 @@ type Actor struct {
 
 type ArticleService struct {
 	db *gorm.DB
+	// recall AI 回顾索引服务, 可为 nil(未启用); router 构造后 SetRecall 注入
+	recall *RecallService
 }
 
 func NewArticleService(db *gorm.DB) *ArticleService {
 	return &ArticleService{db: db}
+}
+
+// SetRecall 注入回顾索引服务, 避免 router 构造顺序耦合.
+func (s *ArticleService) SetRecall(r *RecallService) { s.recall = r }
+
+// indexRecall 异步重建文章向量索引: embedding 在前、删旧插新在后, 幂等.
+// 任何失败只记日志, 绝不影响保存主流程(设计见 doc/v0.3-tech-design.md §5.3).
+func (s *ArticleService) indexRecall(a *model.Article) {
+	if !s.recall.Enabled() {
+		return
+	}
+	art := *a
+	go func() {
+		ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+		defer cancel()
+		if err := s.recall.IndexArticle(ctx, &art); err != nil {
+			log.Printf("[recall] index article %d failed: %v", art.ID, err)
+		}
+	}()
+}
+
+// removeRecall 异步清除文章向量索引(文章删除时), 失败只记日志.
+func (s *ArticleService) removeRecall(articleID uint64) {
+	if !s.recall.Enabled() {
+		return
+	}
+	go func() {
+		if err := s.recall.RemoveArticle(articleID); err != nil {
+			log.Printf("[recall] remove article %d chunks failed: %v", articleID, err)
+		}
+	}()
+}
+
+// visibilityRecall 异步维护可见性变化: 变 draft 删块; 纯翻转只改 scope 列不重嵌;
+// 首次从 draft 出来全量建索引. 失败只记日志.
+func (s *ArticleService) visibilityRecall(a *model.Article) {
+	if !s.recall.Enabled() {
+		return
+	}
+	art := *a
+	go func() {
+		ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+		defer cancel()
+		if err := s.recall.OnVisibilityChanged(ctx, &art); err != nil {
+			log.Printf("[recall] visibility change article %d failed: %v", art.ID, err)
+		}
+	}()
 }
 
 type ArticleListQuery struct {
@@ -190,6 +241,7 @@ func (s *ArticleService) Create(in ArticleInput) (*model.Article, error) {
 			return nil, err
 		}
 	}
+	s.indexRecall(a)
 	return a, nil
 }
 
@@ -228,6 +280,7 @@ func (s *ArticleService) Update(id uint64, in ArticleInput, actor Actor) (*model
 			return nil, err
 		}
 	}
+	s.indexRecall(&a)
 	return &a, nil
 }
 
@@ -248,6 +301,7 @@ func (s *ArticleService) SetVisibility(id uint64, visibility string, actor Actor
 	if err := s.db.Model(&a).UpdateColumn("visibility", a.Visibility).Error; err != nil {
 		return nil, err
 	}
+	s.visibilityRecall(&a)
 	return &a, nil
 }
 
@@ -443,6 +497,7 @@ func (s *ArticleService) Delete(id uint64, actor Actor) error {
 	if res.RowsAffected == 0 {
 		return ErrArticleNotFound
 	}
+	s.removeRecall(id)
 	return nil
 }
 
