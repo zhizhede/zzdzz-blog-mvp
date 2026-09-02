@@ -1,18 +1,31 @@
 <script setup lang="ts">
 import { nextTick, onMounted, ref } from 'vue'
+import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { aiApi, type AIConversation, type AIMessage } from '../../api/ai'
 import { useUserStore } from '../../stores/user'
 import IssueTag from '../../components/IssueTag.vue'
+
+// 引用来源: 后端召回命中时, 作为首个 SSE 事件的 sources 字段推送
+interface RecallSource {
+  index: number
+  article_id: number
+  title: string
+  heading?: string
+  scope: string
+  score: number
+}
 
 interface Msg {
   id?: number
   role: 'user' | 'assistant'
   content: string
   pending?: boolean
+  sources?: RecallSource[]
 }
 
 const userStore = useUserStore()
+const router = useRouter()
 const conversations = ref<AIConversation[]>([])
 const currentConvId = ref<number | null>(null)
 const messages = ref<Msg[]>([])
@@ -147,6 +160,9 @@ const send = async () => {
             if (bubbleEl && bubbleEl.firstChild) {
               bubbleEl.firstChild.nodeValue = aiMsg.content
             }
+          } else if (obj.sources) {
+            // 召回引用来源, 早于 delta 到达; 统一在流结束后随消息一起渲染
+            aiMsg.sources = obj.sources
           } else if (obj.delta) {
             if (bubbleEl && bubbleEl.firstChild) {
               bubbleEl.firstChild.nodeValue += obj.delta
@@ -215,6 +231,19 @@ onMounted(loadConversations)
               <span class="bubble-text">
                 {{ m.content }}<span v-if="m.pending" class="cursor">▍</span>
               </span>
+              <div v-if="m.sources?.length" class="src-row">
+                <span class="mono src-label">引用</span>
+                <button
+                  v-for="s in m.sources"
+                  :key="s.index"
+                  class="src-chip mono"
+                  :title="`相似度 ${(s.score * 100).toFixed(0)}% · ${s.scope === 'private' ? '私人笔记' : '公开文章'}`"
+                  @click="router.push(`/blog/a/${s.article_id}`)"
+                >
+                  <span class="src-idx">[{{ s.index }}]</span>
+                  {{ s.title }}<template v-if="s.heading"> · {{ s.heading }}</template>
+                </button>
+              </div>
             </div>
           </div>
           <div v-if="!messages.length" class="hint">开始对话吧</div>
@@ -366,6 +395,31 @@ onMounted(loadConversations)
 .msg.user .role-tag { color: var(--ink-on-inverse); opacity: 0.7; }
 .cursor { display: inline-block; animation: blink 1s infinite; margin-left: 2px; }
 @keyframes blink { 50% { opacity: 0; } }
+.src-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px solid var(--rule-soft);
+}
+.src-label { font-size: 10px; letter-spacing: 0.16em; color: var(--ink-mute); text-transform: uppercase; }
+.src-chip {
+  background: var(--bg-sunken);
+  border: 1px solid var(--rule-soft);
+  border-radius: 999px;
+  padding: 3px 10px;
+  font-size: 11px;
+  color: var(--ink);
+  cursor: pointer;
+  max-width: 260px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.src-chip:hover { border-color: var(--accent); color: var(--accent); }
+.src-idx { color: var(--ink-mute); margin-right: 4px; }
 .hint { color: var(--ink-mute); text-align: center; padding: 60px 0; font-style: italic; }
 .composer { display: flex; gap: 8px; align-items: stretch; }
 .composer-input {
