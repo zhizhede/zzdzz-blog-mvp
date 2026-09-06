@@ -100,10 +100,10 @@ type ArticleListQuery struct {
 }
 
 type ArticleListResult struct {
-	Total   int64           `json:"total"`
-	Page    int             `json:"page"`
-	Size    int             `json:"size"`
-	Items   []model.Article `json:"items"`
+	Total int64           `json:"total"`
+	Page  int             `json:"page"`
+	Size  int             `json:"size"`
+	Items []model.Article `json:"items"`
 }
 
 func (s *ArticleService) List(q ArticleListQuery) (*ArticleListResult, error) {
@@ -490,6 +490,8 @@ func (s *ArticleService) Delete(id uint64, actor Actor) error {
 	if !canEdit(a, actor) {
 		return ErrArticleNotOwned
 	}
+	// 0012 起为软删除(GORM 自动转 UPDATE deleted_at); removeRecall 仍须执行,
+	// 已删文章不能继续出现在 RAG 召回里. 未来若做回收站恢复, 恢复时需重新索引.
 	res := s.db.Delete(&model.Article{}, id)
 	if res.Error != nil {
 		return res.Error
