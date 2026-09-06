@@ -73,3 +73,31 @@ type AIMessage struct {
 }
 
 func (AIMessage) TableName() string { return "ai_messages" }
+
+// StyleProfile 用户写作风格卡(AI 写作工作流, doc/v0.4-tech-design.md §5).
+// 每用户一行; Source: auto(LLM 提炼) / manual(用户手改).
+type StyleProfile struct {
+	UserID    uint64    `gorm:"primaryKey;column:user_id" json:"user_id"`
+	Profile   string    `gorm:"type:text;not null" json:"profile"`
+	Source    string    `gorm:"size:16;not null;default:auto" json:"source"`
+	UpdatedAt time.Time `json:"updated_at"`
+}
+
+func (StyleProfile) TableName() string { return "style_profiles" }
+
+// ArticleVersion 文章版本快照(AI 采用前 / 回滚前自动写入, doc/v0.4-tech-design.md §6).
+// 只增不改: 回滚也先把当前内容存一条 pre_restore 再写回.
+type ArticleVersion struct {
+	ID        uint64 `gorm:"primaryKey" json:"id"`
+	ArticleID uint64 `gorm:"not null" json:"article_id"`
+	Title     string `gorm:"type:text" json:"title"`
+	Summary   string `gorm:"type:text" json:"summary"`
+	Content   string `gorm:"type:text;not null" json:"content"`
+	// Origin 快照来源: manual / ai_outline / ai_draft / ai_refine / pre_restore
+	Origin    string    `gorm:"size:16;not null" json:"origin"`
+	Note      string    `gorm:"type:text" json:"note"`
+	CreatedBy uint64    `gorm:"not null" json:"created_by"`
+	CreatedAt time.Time `json:"created_at"`
+}
+
+func (ArticleVersion) TableName() string { return "article_versions" }

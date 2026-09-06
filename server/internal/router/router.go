@@ -130,6 +130,9 @@ func New(db *gorm.DB, cfg *config.Config) (*gin.Engine, error) {
 		}
 	}
 	ai := handler.NewAIHandler(&cfg.AI, aiSvc, recallSvc)
+	// AI 写作工作流(compose 单步接口 + 风格卡 + 版本快照), 设计见 doc/v0.4-tech-design.md
+	writingSvc := service.NewWritingService(db, &cfg.AI)
+	writing := handler.NewWritingHandler(&cfg.AI, writingSvc)
 	userSvc := service.NewUserService(db)
 	userH := handler.NewUserHandler(userSvc)
 
@@ -177,6 +180,12 @@ func New(db *gorm.DB, cfg *config.Config) (*gin.Engine, error) {
 			articles.PATCH("/:id/visibility", handler.RequireAuth(&cfg.JWT), art.SetVisibility)
 			// 当前用户自己的 draft 列表
 			articles.GET("/autosave/drafts", handler.RequireAuth(&cfg.JWT), art.ListMyDrafts)
+
+			// 文章版本快照(AI 写作工作流): 判权与文章写接口一致(作者本人/admin)
+			articles.GET("/:id/versions", handler.RequireAuth(&cfg.JWT), writing.ListVersions)
+			articles.POST("/:id/versions", handler.RequireAuth(&cfg.JWT), writing.CreateVersion)
+			articles.GET("/:id/versions/:vid", handler.RequireAuth(&cfg.JWT), writing.GetVersion)
+			articles.POST("/:id/versions/:vid/restore", handler.RequireAuth(&cfg.JWT), writing.RestoreVersion)
 		}
 
 		tags := api.Group("/tags")
@@ -201,6 +210,18 @@ func New(db *gorm.DB, cfg *config.Config) (*gin.Engine, error) {
 
 			// 兼容旧版（无状态）
 			aiGroup.POST("/chat", ai.Chat)
+
+			// AI 写作: 语料 → 大纲 → 成稿 → 调整, 单步 SSE, 循环由前端编排
+			aiGroup.POST("/compose", writing.Compose)
+		}
+
+		// AI 写作风格卡: 每用户一份, 查看/手改/重新提炼
+		writingGroup := api.Group("/writing")
+		writingGroup.Use(handler.RequireAuth(&cfg.JWT))
+		{
+			writingGroup.GET("/style-profile", writing.GetStyleProfile)
+			writingGroup.PUT("/style-profile", writing.PutStyleProfile)
+			writingGroup.POST("/style-profile/derive", writing.DeriveStyleProfile)
 		}
 
 		users := api.Group("/users")
