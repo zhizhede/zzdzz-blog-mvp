@@ -1,13 +1,25 @@
 // build-favicon.mjs
-// 从 pictures/zzdzz-blog-page.png 生成 favicon 各尺寸 (SVG/PNG/ICO)
+// 从 pictures/ 内唯一源图生成 favicon 各尺寸 (SVG/PNG/ICO)
+// 源图约定见 scripts/set-icon.mjs: 仅一张, 旧图在 pictures/bak/
 import sharp from 'sharp';
-import { readFileSync, writeFileSync } from 'node:fs';
+import { readFileSync, writeFileSync, readdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { dirname, resolve } from 'node:path';
+import { dirname, resolve, join } from 'node:path';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(__dirname, '..');
-const SRC = resolve(ROOT, 'pictures/zzdzz-blog-page.png');
+
+const PIC_DIR = resolve(ROOT, 'pictures');
+const IMAGE_RE = /\.(png|jpe?g|webp)$/i;
+const sources = readdirSync(PIC_DIR, { withFileTypes: true })
+  .filter((e) => e.isFile() && IMAGE_RE.test(e.name))
+  .map((e) => e.name);
+if (sources.length !== 1) {
+  console.error(`❌ pictures/ 内应恰有一张源图, 实际 ${sources.length} 张: ${sources.join(', ') || '(空)'}`);
+  console.error('   用 node scripts/set-icon.mjs <图片> 维护唯一源图');
+  process.exit(1);
+}
+const SRC = join(PIC_DIR, sources[0]);
 
 // 原图直接整体使用, 裁剪窗口按图片实际边长(方形)取, 兼容不同尺寸源图
 const CROP = {
