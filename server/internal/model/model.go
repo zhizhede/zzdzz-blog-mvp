@@ -1,11 +1,18 @@
 package model
 
-import "time"
+import (
+	"time"
+
+	"gorm.io/gorm"
+)
 
 type Base struct {
 	ID        uint64    `gorm:"primaryKey" json:"id"`
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
+	// DeletedAt 软删除(0012 起): db.Delete 变标记删除, 查询自动过滤已删行.
+	// 不序列化到 JSON——对外接口永远看不到已删数据.
+	DeletedAt gorm.DeletedAt `gorm:"index" json:"-"`
 }
 
 type User struct {
@@ -65,11 +72,12 @@ type AIConversation struct {
 func (AIConversation) TableName() string { return "ai_conversations" }
 
 type AIMessage struct {
-	ID             uint64    `gorm:"primaryKey" json:"id"`
-	ConversationID uint64    `gorm:"index;not null" json:"conversation_id"`
-	Role           string    `gorm:"size:16;not null" json:"role"`
-	Content        string    `gorm:"type:text;not null;default:''" json:"content"`
-	CreatedAt      time.Time `json:"created_at"`
+	ID             uint64         `gorm:"primaryKey" json:"id"`
+	ConversationID uint64         `gorm:"index;not null" json:"conversation_id"`
+	Role           string         `gorm:"size:16;not null" json:"role"`
+	Content        string         `gorm:"type:text;not null;default:''" json:"content"`
+	CreatedAt      time.Time      `json:"created_at"`
+	DeletedAt      gorm.DeletedAt `gorm:"index" json:"-"`
 }
 
 func (AIMessage) TableName() string { return "ai_messages" }
@@ -77,10 +85,11 @@ func (AIMessage) TableName() string { return "ai_messages" }
 // StyleProfile 用户写作风格卡(AI 写作工作流, doc/v0.4-tech-design.md §5).
 // 每用户一行; Source: auto(LLM 提炼) / manual(用户手改).
 type StyleProfile struct {
-	UserID    uint64    `gorm:"primaryKey;column:user_id" json:"user_id"`
-	Profile   string    `gorm:"type:text;not null" json:"profile"`
-	Source    string    `gorm:"size:16;not null;default:auto" json:"source"`
-	UpdatedAt time.Time `json:"updated_at"`
+	UserID    uint64         `gorm:"primaryKey;column:user_id" json:"user_id"`
+	Profile   string         `gorm:"type:text;not null" json:"profile"`
+	Source    string         `gorm:"size:16;not null;default:auto" json:"source"`
+	UpdatedAt time.Time      `json:"updated_at"`
+	DeletedAt gorm.DeletedAt `gorm:"index" json:"-"`
 }
 
 func (StyleProfile) TableName() string { return "style_profiles" }

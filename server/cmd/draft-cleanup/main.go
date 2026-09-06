@@ -1,8 +1,9 @@
 // draft-cleanup 删除 30 天没动过的 draft 文章.
 //
 // 用法:
-//   draft-cleanup                        使用默认 30 天
-//   draft-cleanup -days 7 -dry-run       只打印不删
+//
+//	draft-cleanup                        使用默认 30 天
+//	draft-cleanup -days 7 -dry-run       只打印不删
 //
 // 部署建议: 宝塔计划任务每天 04:00 跑一次 (带绝对路径, 不要用相对).
 package main
@@ -40,7 +41,8 @@ func main() {
 		var count int64
 		if err := db.Model(&struct{}{}).
 			Table("articles").
-			Where("visibility = ? AND (last_autosaved_at IS NULL OR last_autosaved_at < ?)", "draft", cutoff).
+			// deleted_at IS NULL: 只回收存活行; 软删行是有意保留的数据, 不清
+			Where("visibility = ? AND deleted_at IS NULL AND (last_autosaved_at IS NULL OR last_autosaved_at < ?)", "draft", cutoff).
 			Count(&count).Error; err != nil {
 			log.Fatalf("count: %v", err)
 		}
@@ -48,7 +50,7 @@ func main() {
 		return
 	}
 	res := db.Exec(
-		"DELETE FROM articles WHERE visibility = ? AND (last_autosaved_at IS NULL OR last_autosaved_at < ?)",
+		"DELETE FROM articles WHERE visibility = ? AND deleted_at IS NULL AND (last_autosaved_at IS NULL OR last_autosaved_at < ?)",
 		"draft", cutoff,
 	)
 	if res.Error != nil {
