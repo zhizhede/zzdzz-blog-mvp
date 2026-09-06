@@ -2,8 +2,9 @@
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { onBeforeRouteLeave, useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { articleApi, categoryApi, tagApi, type Article, type Tag } from '../../api'
+import { articleApi, categoryApi, tagApi, writingApi, type Article, type Tag } from '../../api'
 import IssueTag from '../../components/IssueTag.vue'
+import WritingPanel from '../../components/WritingPanel.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -29,6 +30,31 @@ const dirty = ref(false)
 const lastSavedAt = ref<string | null>(null)
 const saving = ref(false)
 const saveError = ref<string | null>(null)
+
+// AI 写作面板
+const aiPanelOpen = ref(false)
+// 采用前先把编辑器当前内容存为版本快照(§6.1), 失败则阻断采用
+async function onAdoptAI(p: { content: string; action: string; instruction?: string }) {
+  if (draftId.value) {
+    try {
+      await writingApi.createVersion(draftId.value, 'ai_' + p.action, p.instruction || '')
+    } catch {
+      ElMessage.error('版本备份失败,已取消采用,请重试')
+      return
+    }
+  }
+  form.value.content = p.content
+  aiPanelOpen.value = false
+  onInput()
+  ElMessage.success('已采用 AI 结果')
+}
+// 面板内回滚: 文章已在服务端恢复, 编辑器同步为恢复后的内容
+function onRestoredAI(a: { title: string; summary: string; content: string }) {
+  form.value.title = a.title
+  form.value.summary = a.summary
+  form.value.content = a.content
+  dirty.value = false
+}
 
 const fetchCategories = async () => {
   const res = await categoryApi.list()
@@ -273,6 +299,7 @@ const statusText = computed(() => {
         </label>
 
         <div class="actions">
+          <button class="text-btn" @click="aiPanelOpen = true">AI 写作</button>
           <button class="text-btn" @click="router.push('/admin/articles')">返回列表</button>
           <button class="primary-btn" @click="handlePublish">
             {{ form.visibility === 'public' ? '发布' : '保存' }}
@@ -289,6 +316,15 @@ const statusText = computed(() => {
         </article>
       </aside>
     </div>
+
+    <WritingPanel
+      v-if="aiPanelOpen"
+      :editor-content="form.content"
+      :article-id="draftId"
+      @close="aiPanelOpen = false"
+      @adopt="onAdoptAI"
+      @restored="onRestoredAI"
+    />
   </div>
 </template>
 
