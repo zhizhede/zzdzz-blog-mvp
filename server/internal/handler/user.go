@@ -40,11 +40,14 @@ func (h *UserHandler) Create(c *gin.Context) {
 	}
 	u, err := h.svc.Create(req.Username, req.Password)
 	if err != nil {
-		if errors.Is(err, service.ErrUsernameConflict) {
+		switch {
+		case errors.Is(err, service.ErrUsernameConflict):
 			response.Fail(c, 409, 4009, "username already exists")
-			return
+		case errors.Is(err, service.ErrUsernameReserved):
+			response.Fail(c, 409, 4009, "username is reserved")
+		default:
+			response.ServerError(c, err.Error())
 		}
-		response.ServerError(c, err.Error())
 		return
 	}
 	response.OK(c, u)

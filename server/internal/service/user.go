@@ -3,6 +3,7 @@ package service
 import (
 	"errors"
 
+	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 
@@ -40,13 +41,19 @@ func (s *UserService) List() ([]model.User, error) {
 	return users, nil
 }
 
-// Create 新建用户, 密码 bcrypt 哈希入库
+// Create 新建用户(admin 后台), 密码 bcrypt 哈希入库.
+// username 全系统唯一(0014), 重名返回 ErrUsernameConflict;
+// 保留名(ZZDZZ_ADMIN_USERNAMES)拒绝, 理由同 AuthService.Register.
 func (s *UserService) Create(username, password string) (*model.User, error) {
+	if _, reserved := adminUsernames()[username]; reserved {
+		return nil, ErrUsernameReserved
+	}
 	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
 		return nil, err
 	}
 	u := &model.User{
+		UUID:         uuid.NewString(),
 		Username:     username,
 		PasswordHash: string(hash),
 		IsActive:     true,

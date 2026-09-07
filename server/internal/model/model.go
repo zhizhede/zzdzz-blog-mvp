@@ -17,7 +17,10 @@ type Base struct {
 
 type User struct {
 	Base
-	Username     string `gorm:"size:64;uniqueIndex;not null" json:"username"`
+	// UUID 用户稳定唯一身份标识(0013 引入): 对外接口(/auth/* 等)暴露, 适合跨改名引用.
+	// 0014 起用户名恢复全系统唯一(uq_users_username_alive), 登录/注册判定键回到 username.
+	UUID     string `gorm:"column:uuid;size:36;not null;index" json:"uuid"`
+	Username string `gorm:"size:64;not null;index" json:"username"`
 	PasswordHash string `gorm:"size:128;not null" json:"-"`
 	IsActive     bool   `gorm:"not null;default:true" json:"is_active"`
 	// IsAdmin 标记超级管理员. 当前由 service.Login 根据 ZZDZZ_ADMIN_USERNAMES 推断回填,

@@ -42,16 +42,54 @@ func (h *AuthHandler) Login(c *gin.Context) {
 
 	response.OK(c, gin.H{
 		"token":      token,
-		"user":       gin.H{"id": user.ID, "username": user.Username, "is_admin": user.IsAdmin},
+		"user":       gin.H{"id": user.ID, "uuid": user.UUID, "username": user.Username, "is_admin": user.IsAdmin},
 		"expires_in": int(h.cfg.ExpireDuration().Seconds()),
 	})
 }
 
+type registerReq struct {
+	Username string `json:"username" binding:"required,min=3,max=64"`
+	Password string `json:"password" binding:"required,min=6,max=64"`
+}
+
+// Register 开放注册: 只需用户名 + 密码(用户名全系统唯一, 0014); 成功即返回 token(注册即登录).
+func (h *AuthHandler) Register(c *gin.Context) {
+	var req registerReq
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, "username (3-64) and password (6-64) required")
+		return
+	}
+
+	token, user, err := h.svc.Register(req.Username, req.Password)
+	if err != nil {
+		switch {
+		case errors.Is(err, service.ErrUsernameConflict):
+			response.Fail(c, 409, 4009, "username already exists")
+		case errors.Is(err, service.ErrUsernameReserved):
+			response.Fail(c, 409, 4010, "username is reserved")
+		default:
+			response.ServerError(c, err.Error())
+		}
+		return
+	}
+
+	response.OK(c, gin.H{
+		"token":      token,
+		"user":       gin.H{"id": user.ID, "uuid": user.UUID, "username": user.Username, "is_admin": user.IsAdmin},
+		"expires_in": int(h.cfg.ExpireDuration().Seconds()),
+	})
+}
+
+// Me 页面刷新时拉最新用户状态. uuid 不进 JWT(老 token 无此字段), 每次按 id 现查.
 func (h *AuthHandler) Me(c *gin.Context) {
-	uid, _ := c.Get("user_id")
+	uid := userIDOf(c)
 	uname, _ := c.Get("username")
 	isAdmin, _ := c.Get("is_admin")
-	response.OK(c, gin.H{"id": uid, "username": uname, "is_admin": isAdmin})
+	uuid := ""
+	if u, err := h.svc.GetByID(uid); err == nil {
+		uuid = u.UUID
+	}
+	response.OK(c, gin.H{"id": uid, "uuid": uuid, "username": uname, "is_admin": isAdmin})
 }
 
 type changeOwnPasswordReq struct {

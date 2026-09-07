@@ -143,6 +143,8 @@ func New(db *gorm.DB, cfg *config.Config) (*gin.Engine, error) {
 		authGroup := api.Group("/auth")
 		{
 			authGroup.POST("/login", auth.Login)
+			// 开放注册(0013): 游客输用户名(可重名)+ 密码即可注册, 成功即返回 token
+			authGroup.POST("/register", auth.Register)
 
 			protected := authGroup.Group("")
 			protected.Use(handler.RequireAuth(&cfg.JWT))
