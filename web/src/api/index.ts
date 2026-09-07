@@ -1,15 +1,25 @@
 import { http, type ApiResponse } from './http'
 
+export interface AuthUser {
+  id: number
+  uuid: string
+  username: string
+  is_admin: boolean
+}
+
 export interface LoginResult {
   token: string
-  user: { id: number; username: string; is_admin: boolean }
+  user: AuthUser
   expires_in: number
 }
 
 export const authApi = {
   login: (username: string, password: string) =>
     http.post<any, ApiResponse<LoginResult>>('/auth/login', { username, password }),
-  me: () => http.get<any, ApiResponse<{ id: number; username: string; is_admin: boolean }>>('/auth/me'),
+  // 开放注册: 用户名可重名, 注册成功即返回 token(注册即登录)
+  register: (username: string, password: string) =>
+    http.post<any, ApiResponse<LoginResult>>('/auth/register', { username, password }),
+  me: () => http.get<any, ApiResponse<AuthUser>>('/auth/me'),
   changeOwnPassword: (oldPassword: string, newPassword: string) =>
     http.put<any, ApiResponse<null>>('/auth/password', {
       old_password: oldPassword,

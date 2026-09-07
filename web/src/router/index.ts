@@ -16,18 +16,23 @@ const routes = [
     meta: { public: true },
   },
   {
+    // 首页(0013 起) = 公开博客列表, 游客直接可看, 无需登录
     path: '/',
+    redirect: '/blog',
+  },
+  {
+    path: '/admin',
     component: () => import('../layouts/AdminLayout.vue'),
     meta: { requiresAuth: true },
     children: [
       { path: '', redirect: '/admin/articles' },
-      { path: 'admin/articles', component: () => import('../views/admin/ArticleList.vue') },
-      { path: 'admin/articles/new', component: () => import('../views/admin/ArticleEditor.vue') },
-      { path: 'admin/articles/:id/edit', component: () => import('../views/admin/ArticleEditor.vue') },
-      { path: 'admin/categories', component: () => import('../views/admin/CategoryManage.vue') },
-      { path: 'admin/users', component: () => import('../views/admin/UserManage.vue') },
-      { path: 'admin/ai', component: () => import('../views/admin/AICenter.vue') },
-      { path: 'admin/settings', component: () => import('../views/admin/SiteSettings.vue') },
+      { path: 'articles', component: () => import('../views/admin/ArticleList.vue') },
+      { path: 'articles/new', component: () => import('../views/admin/ArticleEditor.vue') },
+      { path: 'articles/:id/edit', component: () => import('../views/admin/ArticleEditor.vue') },
+      { path: 'categories', component: () => import('../views/admin/CategoryManage.vue') },
+      { path: 'users', component: () => import('../views/admin/UserManage.vue') },
+      { path: 'ai', component: () => import('../views/admin/AICenter.vue') },
+      { path: 'settings', component: () => import('../views/admin/SiteSettings.vue') },
     ],
   },
   {

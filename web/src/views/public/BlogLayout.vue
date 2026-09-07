@@ -59,6 +59,7 @@ const handleLogin = () => {
             </el-dropdown>
           </template>
           <template v-else>
+            <a class="login-link" @click="router.push({ path: '/login', query: { mode: 'register' } })">注册</a>
             <a class="login-link" @click="handleLogin">登录</a>
           </template>
         </div>
