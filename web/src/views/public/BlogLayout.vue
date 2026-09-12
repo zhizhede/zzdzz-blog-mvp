@@ -2,6 +2,7 @@
 import { computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '../../stores/user'
+import { beian } from '../../beian'
 
 const router = useRouter()
 const userStore = useUserStore()
@@ -68,7 +69,12 @@ const handleLogin = () => {
     <main class="blog-main">
       <router-view />
     </main>
-    <footer class="blog-footer">© 2026 zzdzz blog · powered by Go + Vue3</footer>
+    <footer class="blog-footer">
+      <div>© 2026 zzdzz blog · powered by Go + Vue3</div>
+      <div v-if="beian" class="beian">
+        <a :href="beian.miit_url" target="_blank" rel="noopener noreferrer">{{ beian.icp }}</a>
+      </div>
+    </footer>
   </div>
 </template>
 
@@ -93,5 +99,8 @@ const handleLogin = () => {
 .login-link { color: #409eff; cursor: pointer; }
 .blog-main { flex: 1; max-width: 800px; margin: 0 auto; padding: 32px 24px; width: 100%; box-sizing: border-box; }
 .blog-footer { text-align: center; padding: 20px; color: #909399; border-top: 1px solid #ebeef5; background: #fff; }
+.beian { margin-top: 6px; font-size: 12px; }
+.beian a { color: #909399; }
+.beian a:hover { color: #409eff; }
 a { color: #409eff; text-decoration: none; }
 </style>

@@ -49,6 +49,8 @@ server/config/*.production.yaml
 server/config/*.staging.yaml
 **/*.production.yaml
 **/*.staging.yaml
+# ICP 备案信息(含真实姓名等个人信息), 本地保留, 构建时打进前端产物
+web/beian.config.json
 
 # ─────────────── Build artifacts ───────────────
 web/src/assets/
