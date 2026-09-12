@@ -1,0 +1,397 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "zzdzz-blog 高层运行时架构",
+    "locale": "zh-CN",
+    "quality_profile": "showcase",
+    "output": "doc/architecture/architecture.html",
+    "repository": {
+      "url": "https://github.com/zhizhede/zzdzz-blog-mvp.git",
+      "provider": "github",
+      "link_mode": "web",
+      "revision": "2550648e6936529044ca4824436ef87596e8c5b7"
+    }
+  },
+  "components": [
+    {
+      "id": "visitor",
+      "type": "external",
+      "label": "游客浏览器",
+      "sublabel": "公开博客 · 文章阅读",
+      "pos": [
+        30,
+        60
+      ],
+      "size": [
+        128,
+        60
+      ],
+      "sources": [
+        {
+          "path": "web/src/views/public/BlogList.vue",
+          "label": "博客列表页"
+        }
+      ]
+    },
+    {
+      "id": "author",
+      "type": "external",
+      "label": "登录用户浏览器",
+      "sublabel": "写作 · AI 对话 · 后台",
+      "pos": [
+        30,
+        190
+      ],
+      "size": [
+        128,
+        60
+      ],
+      "sources": [
+        {
+          "path": "web/src/components/WritingPanel.vue",
+          "label": "写作面板"
+        }
+      ]
+    },
+    {
+      "id": "proxy",
+      "type": "cloud",
+      "label": "宝塔 Nginx 反代",
+      "sublabel": "TLS 终结(可选)",
+      "pos": [
+        220,
+        150
+      ],
+      "size": [
+        128,
+        60
+      ],
+      "sources": [
+        {
+          "path": "deploy/README.md",
+          "line": 53,
+          "label": "部署架构"
+        }
+      ]
+    },
+    {
+      "id": "gin",
+      "type": "backend",
+      "label": "Go · Gin 服务",
+      "sublabel": "静态托管 web/ · CORS",
+      "pos": [
+        420,
+        150
+      ],
+      "size": [
+        134,
+        60
+      ],
+      "sources": [
+        {
+          "path": "server/main.go",
+          "line": 51,
+          "label": "启动入口"
+        },
+        {
+          "path": "server/internal/router/router.go",
+          "line": 50,
+          "label": "路由装配"
+        }
+      ]
+    },
+    {
+      "id": "jwtmw",
+      "type": "security",
+      "label": "JWT 鉴权中间件",
+      "sublabel": "Optional / Require / Admin",
+      "pos": [
+        620,
+        150
+      ],
+      "size": [
+        142,
+        60
+      ],
+      "sources": [
+        {
+          "path": "server/internal/router/router.go",
+          "line": 21,
+          "label": "chainedAdmin"
+        }
+      ]
+    },
+    {
+      "id": "handlers",
+      "type": "backend",
+      "label": "REST Handler 层",
+      "sublabel": "auth · article · site …",
+      "pos": [
+        620,
+        270
+      ],
+      "size": [
+        142,
+        60
+      ],
+      "sources": [
+        {
+          "path": "server/internal/handler/article.go",
+          "label": "文章接口"
+        }
+      ]
+    },
+    {
+      "id": "services",
+      "type": "backend",
+      "label": "Service 层",
+      "sublabel": "属主 · 可见性校验",
+      "pos": [
+        840,
+        270
+      ],
+      "size": [
+        140,
+        60
+      ],
+      "sources": [
+        {
+          "path": "server/internal/service/article.go",
+          "label": "文章服务"
+        }
+      ]
+    },
+    {
+      "id": "aisvc",
+      "type": "backend",
+      "label": "AI 服务群",
+      "sublabel": "对话 · 写作 · RAG 召回",
+      "pos": [
+        620,
+        405
+      ],
+      "size": [
+        142,
+        60
+      ],
+      "sources": [
+        {
+          "path": "server/internal/service/ai.go",
+          "label": "AI 会话"
+        },
+        {
+          "path": "server/internal/service/recall.go",
+          "label": "RAG 召回"
+        }
+      ]
+    },
+    {
+      "id": "gorm",
+      "type": "backend",
+      "label": "GORM 模型层",
+      "sublabel": "迁移 0001–0015",
+      "pos": [
+        840,
+        405
+      ],
+      "size": [
+        140,
+        56
+      ],
+      "sources": [
+        {
+          "path": "server/internal/model/model.go",
+          "label": "数据模型"
+        }
+      ]
+    },
+    {
+      "id": "pg",
+      "type": "database",
+      "label": "PostgreSQL 16",
+      "sublabel": "named volume 持久化",
+      "pos": [
+        1040,
+        405
+      ],
+      "size": [
+        128,
+        60
+      ],
+      "sources": [
+        {
+          "path": "server/migrations/0001_init.sql",
+          "label": "初始 schema"
+        }
+      ]
+    },
+    {
+      "id": "llm",
+      "type": "external",
+      "label": "OpenAI 兼容 API",
+      "sublabel": "Chat + Embedding",
+      "tag": "外部依赖",
+      "pos": [
+        840,
+        520
+      ],
+      "size": [
+        140,
+        60
+      ],
+      "sources": [
+        {
+          "path": "server/config/config.go",
+          "line": 41,
+          "label": "AIConfig"
+        }
+      ]
+    }
+  ],
+  "boundaries": [
+    {
+      "kind": "region",
+      "label": "公网 · 不可信区",
+      "wraps": [
+        "visitor",
+        "author"
+      ]
+    },
+    {
+      "kind": "region",
+      "label": "云服务器(宝塔 / Docker)",
+      "wraps": [
+        "proxy",
+        "gin",
+        "jwtmw",
+        "handlers",
+        "services",
+        "aisvc",
+        "gorm",
+        "pg"
+      ]
+    },
+    {
+      "kind": "security-group",
+      "label": "应用内网 · 信任边界",
+      "wraps": [
+        "gin",
+        "jwtmw",
+        "handlers",
+        "services",
+        "aisvc",
+        "gorm",
+        "pg"
+      ],
+      "pad": 14
+    },
+    {
+      "kind": "region",
+      "label": "第三方 AI 服务",
+      "wraps": [
+        "llm"
+      ]
+    }
+  ],
+  "connections": [
+    {
+      "from": "visitor",
+      "to": "proxy",
+      "label": "HTTPS",
+      "variant": "emphasis",
+      "width": 2
+    },
+    {
+      "from": "author",
+      "to": "proxy",
+      "label": "Bearer JWT"
+    },
+    {
+      "from": "proxy",
+      "to": "gin",
+      "label": "反代 /api/*",
+      "variant": "emphasis",
+      "width": 2
+    },
+    {
+      "from": "gin",
+      "to": "jwtmw",
+      "label": "路由匹配",
+      "variant": "emphasis"
+    },
+    {
+      "from": "jwtmw",
+      "to": "handlers",
+      "label": "身份注入",
+      "variant": "emphasis",
+      "labelDy": 24
+    },
+    {
+      "from": "handlers",
+      "to": "services",
+      "label": "业务调用",
+      "variant": "emphasis"
+    },
+    {
+      "from": "handlers",
+      "to": "aisvc",
+      "label": "AI 请求",
+      "labelDy": 24
+    },
+    {
+      "from": "services",
+      "to": "gorm",
+      "label": "数据访问",
+      "variant": "emphasis",
+      "labelDy": 24
+    },
+    {
+      "from": "aisvc",
+      "to": "gorm",
+      "label": "会话 / 向量",
+      "variant": "dashed"
+    },
+    {
+      "from": "gorm",
+      "to": "pg",
+      "label": "SQL",
+      "variant": "emphasis",
+      "width": 2
+    },
+    {
+      "from": "aisvc",
+      "to": "llm",
+      "label": "HTTPS · API Key",
+      "variant": "security"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "主路径 · 游客读文章",
+      "items": [
+        "Gin 托管 ./web,未命中回退 index.html(SPA)",
+        "GET /api/v1/articles 走 OptionalAuth,游客仅见 public",
+        "详情 :id/full 连同标签一次返回"
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "信任边界与鉴权",
+      "items": [
+        "跨公网写操作需 Bearer JWT;chainedAdmin 守护管理接口",
+        "AI API Key 只在服务器配置,永不下发浏览器"
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "部署与外部依赖",
+      "items": [
+        "compose 三容器或单二进制托管 web/(当前线上)",
+        "迁移 0001–0015 首启自动执行;PG 存 named volume",
+        "RAG 缺 embedding 配置时自动退化为普通聊天"
+      ]
+    }
+  ]
+}
