@@ -1,15 +1,13 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
 import { ElMessage } from 'element-plus'
-import { authApi } from '../../api'
 import { useUserStore } from '../../stores/user'
 import IssueTag from '../../components/IssueTag.vue'
+import ChangePasswordDialog from '../../components/ChangePasswordDialog.vue'
 
 const userStore = useUserStore()
 
-const passwordDialog = ref(false)
-const passwordForm = ref({ old_password: '', new_password: '', confirm: '' })
-const saving = ref(false)
+const pwdDialog = ref(false)
 
 // 站点是 HTTP(IP 直访)时 navigator.clipboard 不存在, 降级 execCommand
 const copyText = async (text: string) => {
@@ -44,31 +42,6 @@ const copyUuid = async () => {
 onMounted(() => {
   if (!userStore.userUuid) userStore.refresh()
 })
-
-const handleChangePassword = async () => {
-  const { old_password, new_password, confirm } = passwordForm.value
-  if (!old_password) {
-    ElMessage.warning('请输入旧密码')
-    return
-  }
-  if (new_password.length < 6) {
-    ElMessage.warning('新密码至少 6 位')
-    return
-  }
-  if (new_password !== confirm) {
-    ElMessage.warning('两次新密码不一致')
-    return
-  }
-  saving.value = true
-  try {
-    await authApi.changeOwnPassword(old_password, new_password)
-    ElMessage.success('密码已更新')
-    passwordDialog.value = false
-    passwordForm.value = { old_password: '', new_password: '', confirm: '' }
-  } finally {
-    saving.value = false
-  }
-}
 </script>
 
 <template>
@@ -100,7 +73,7 @@ const handleChangePassword = async () => {
           </div>
         </div>
         <div class="actions">
-          <button class="primary-btn" @click="passwordDialog = true">
+          <button class="primary-btn" @click="pwdDialog = true">
             <span class="mono">↻</span> 重置密码
           </button>
         </div>
@@ -116,31 +89,7 @@ const handleChangePassword = async () => {
       </section>
     </div>
 
-    <div v-if="passwordDialog" class="overlay" @click.self="passwordDialog = false">
-      <div class="dialog">
-        <p class="mono d-tag">RESET PASSWORD</p>
-        <h2 class="display d-title">重置密码</h2>
-        <label class="field">
-          <span class="mono label">OLD PASSWORD</span>
-          <input v-model="passwordForm.old_password" type="password" class="input" />
-        </label>
-        <label class="field">
-          <span class="mono label">NEW PASSWORD · 至少 6 位</span>
-          <input v-model="passwordForm.new_password" type="password" class="input" />
-        </label>
-        <label class="field">
-          <span class="mono label">CONFIRM</span>
-          <input v-model="passwordForm.confirm" type="password" class="input" />
-        </label>
-        <div class="d-row">
-          <button class="text-btn" @click="passwordDialog = false">取消</button>
-          <button class="primary-btn" :disabled="saving" @click="handleChangePassword">
-            <span v-if="saving" class="mono">…</span>
-            <span v-else>保存</span>
-          </button>
-        </div>
-      </div>
-    </div>
+    <ChangePasswordDialog v-model="pwdDialog" />
   </div>
 </template>
 
@@ -227,27 +176,6 @@ const handleChangePassword = async () => {
 }
 .primary-btn:hover { background: var(--accent); }
 .primary-btn:disabled { background: var(--ink-faint); cursor: not-allowed; }
-.text-btn {
-  background: transparent;
-  border: 0;
-  border-bottom: 1px solid var(--rule-soft);
-  padding: 4px 0;
-  font-family: var(--font-body);
-  font-size: 13px;
-  color: var(--ink);
-  cursor: pointer;
-}
-.text-btn:hover { color: var(--accent); border-bottom-color: var(--accent); }
-
-.overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 100; }
-.dialog { background: var(--bg); border: 1px solid var(--rule); border-radius: var(--radius); padding: 28px; width: 420px; display: flex; flex-direction: column; gap: 16px; }
-.d-tag { color: var(--accent); margin: 0; }
-.d-title { font-size: 24px; margin: 0; }
-.field { display: flex; flex-direction: column; gap: 6px; }
-.label { color: var(--ink-mute); font-size: 11px; text-transform: uppercase; letter-spacing: 0.16em; }
-.input { background: transparent; border: 0; border-bottom: 1px solid var(--rule-soft); padding: 8px 0; font-family: var(--font-body); font-size: 14px; color: var(--ink); outline: none; }
-.input:focus { border-bottom-color: var(--ink); }
-.d-row { display: flex; gap: 12px; justify-content: flex-end; padding-top: 8px; }
 
 @media (max-width: 760px) { .grid { grid-template-columns: 1fr; } }
 </style>

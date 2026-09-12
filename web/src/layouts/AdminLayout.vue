@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import {
   Document,
@@ -7,15 +7,18 @@ import {
   User,
   ChatDotRound,
   Setting,
+  Key,
 } from '@element-plus/icons-vue'
 import AppHeader from '../components/AppHeader.vue'
 import IssueTag from '../components/IssueTag.vue'
+import ChangePasswordDialog from '../components/ChangePasswordDialog.vue'
 
 const route = useRoute()
 const router = useRouter()
 
 const active = computed(() => route.path)
 const today = new Date().toISOString().slice(0, 10).replace(/-/g, '/')
+const pwdDialog = ref(false)
 </script>
 
 <template>
@@ -66,6 +69,10 @@ const today = new Date().toISOString().slice(0, 10).replace(/-/g, '/')
         </nav>
 
         <hr class="rule" />
+        <button class="side-item" @click="pwdDialog = true">
+          <el-icon><Key /></el-icon><span>修改密码</span>
+          <em class="mono">sec</em>
+        </button>
         <p class="mono side-hint">
           后台管理 · 内容、用户、AI 会话
         </p>
@@ -75,6 +82,7 @@ const today = new Date().toISOString().slice(0, 10).replace(/-/g, '/')
         <router-view />
       </main>
     </div>
+    <ChangePasswordDialog v-model="pwdDialog" />
   </div>
 </template>
 
