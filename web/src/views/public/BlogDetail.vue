@@ -4,7 +4,6 @@ import { useRoute, useRouter } from 'vue-router'
 import { articleApi, categoryApi, type Article, type Category } from '../../api'
 import IssueTag from '../../components/IssueTag.vue'
 import Markdown from '../../components/Markdown.vue'
-import AppFooter from '../../components/AppFooter.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -84,7 +83,6 @@ const dateStr = computed(() => {
       </div>
     </div>
 
-    <AppFooter />
     </template>
   </div>
 </template>
