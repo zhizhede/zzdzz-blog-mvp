@@ -51,6 +51,15 @@ func New(db *gorm.DB, cfg *config.Config) (*gin.Engine, error) {
 	r := gin.New()
 	r.Use(gin.Logger(), gin.Recovery())
 
+	// 只信任本机反代(宝塔 nginx): ClientIP 按 X-Forwarded-For 从可信节点之后取
+	// 真实访客 IP, 防止客户端伪造该头; 本地直连开发(RemoteAddr 即客户端)不受影响
+	if err := r.SetTrustedProxies([]string{"127.0.0.1"}); err != nil {
+		return nil, err
+	}
+
+	// 访问日志(0016): 必须先于下面的静态路由/NoRoute 注册, 否则页面请求不经过
+	r.Use(handler.RecordVisit(db, cfg.JWT.Secret))
+
 	// 前端静态文件 (web/dist 在二进制同级目录)
 	r.Static("/assets", "./web/assets")
 	r.StaticFile("/icons.svg", "./web/icons.svg")
@@ -246,6 +255,14 @@ func New(db *gorm.DB, cfg *config.Config) (*gin.Engine, error) {
 			siteGroup.PUT("/icon", site.Upload)
 			siteGroup.DELETE("/icon", site.Reset)
 			siteGroup.GET("/icon/meta", site.Meta)
+		}
+
+		// 访问日志查询(0016): 仅 admin, 数据由全局中间件 RecordVisit 写入
+		visitLogSvc := service.NewVisitLogService(db)
+		visitLogs := api.Group("/visit-logs")
+		visitLogs.Use(chainedAdmin(&cfg.JWT))
+		{
+			visitLogs.GET("", handler.NewVisitLogHandler(visitLogSvc).List)
 		}
 	}
 

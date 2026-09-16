@@ -116,3 +116,16 @@ type ArticleVersion struct {
 }
 
 func (ArticleVersion) TableName() string { return "article_versions" }
+
+// VisitLog 访问日志(0016): 每位访客(IP)每天至多一条, 由全局中间件 RecordVisit 写入.
+// 追加型流水表: 只增不改, 不复用 Base(无软删/更新时间); UserID 为 nil 表示匿名访客.
+type VisitLog struct {
+	ID        uint64    `gorm:"primaryKey" json:"id"`
+	IP        string    `gorm:"size:45;not null;index" json:"ip"`
+	UserID    *uint64   `gorm:"index" json:"user_id"`
+	Path      string    `gorm:"size:512;not null;default:''" json:"path"`
+	UserAgent string    `gorm:"size:512;not null;default:''" json:"user_agent"`
+	CreatedAt time.Time `json:"created_at"`
+}
+
+func (VisitLog) TableName() string { return "visit_logs" }
