@@ -178,6 +178,22 @@ function onInput() {
   scheduleAutosave()
 }
 
+// 框选字数: 监听正文编辑器选区, 非空选区在 CONTENT 标签右侧显示字数(不含换行)
+const contentEl = ref<HTMLTextAreaElement | null>(null)
+const selCount = ref(0)
+function updateSelCount() {
+  const el = contentEl.value
+  if (!el || el.selectionEnd <= el.selectionStart) {
+    selCount.value = 0
+    return
+  }
+  selCount.value = el.value.slice(el.selectionStart, el.selectionEnd).replace(/\r?\n/g, '').length
+}
+function onContentInput() {
+  onInput()
+  updateSelCount()
+}
+
 async function handlePublish() {
   if (!form.value.title.trim() || !form.value.content.trim() || !form.value.category_id) {
     ElMessage.warning('请填写标题、正文、分类')
@@ -288,13 +304,21 @@ const statusText = computed(() => {
         </div>
 
         <label class="field">
-          <span class="mono label">CONTENT · MARKDOWN</span>
+          <span class="mono label label-row">
+            CONTENT · MARKDOWN
+            <em v-if="selCount > 0" class="sel-count">已选 {{ selCount }} 字</em>
+          </span>
           <textarea
+            ref="contentEl"
             v-model="form.content"
             class="input mono-area"
             rows="18"
             placeholder="支持 Markdown"
-            @input="onInput"
+            @input="onContentInput"
+            @select="updateSelCount"
+            @keyup="updateSelCount"
+            @mouseup="updateSelCount"
+            @blur="selCount = 0"
           />
         </label>
 
@@ -358,6 +382,14 @@ const statusText = computed(() => {
 .input:focus { border-bottom-color: var(--ink); }
 .title-input { font-size: 27.5px; font-family: var(--font-display); font-weight: 500; }
 .mono-area { font-family: var(--font-mono); font-size: 16.25px; line-height: 1.7; }
+.label-row { display: flex; align-items: baseline; }
+.sel-count {
+  margin-left: auto;
+  color: var(--accent);
+  font-style: normal;
+  text-transform: none;
+  letter-spacing: 0.04em;
+}
 .row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
 
 .vis-row { display: flex; gap: 6px; }
