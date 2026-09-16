@@ -35,7 +35,7 @@ func (h *UserHandler) List(c *gin.Context) {
 func (h *UserHandler) Create(c *gin.Context) {
 	var req createUserReq
 	if err := c.ShouldBindJSON(&req); err != nil {
-		response.BadRequest(c, "username (>=3) and password (>=6) required")
+		response.BadRequest(c, "用户名至少 3 字符, 密码至少 6 字符")
 		return
 	}
 	u, err := h.svc.Create(req.Username, req.Password)
@@ -62,12 +62,12 @@ func (h *UserHandler) ChangePassword(c *gin.Context) {
 	uid := userIDOf(c)
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
-		response.BadRequest(c, "invalid id")
+		response.BadRequest(c, "无效的 ID")
 		return
 	}
 	var req changePasswordReq
 	if err := c.ShouldBindJSON(&req); err != nil {
-		response.BadRequest(c, "old_password and new_password (>=6) required")
+		response.BadRequest(c, "请输入旧密码, 新密码至少 6 位")
 		return
 	}
 	if err := h.svc.ChangePassword(uid, id, req.OldPassword, req.NewPassword); err != nil {
@@ -92,12 +92,12 @@ func (h *UserHandler) SetActive(c *gin.Context) {
 	uid := userIDOf(c)
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
-		response.BadRequest(c, "invalid id")
+		response.BadRequest(c, "无效的 ID")
 		return
 	}
 	var req setActiveReq
 	if err := c.ShouldBindJSON(&req); err != nil {
-		response.BadRequest(c, "is_active required")
+		response.BadRequest(c, "缺少启用状态参数")
 		return
 	}
 	if err := h.svc.SetActive(uid, id, *req.IsActive); err != nil {
@@ -105,9 +105,9 @@ func (h *UserHandler) SetActive(c *gin.Context) {
 		case errors.Is(err, service.ErrUserNotFound):
 			response.Fail(c, 404, 4004, "user not found")
 		case errors.Is(err, service.ErrCannotDisableSelf):
-			response.Fail(c, 400, 4001, "cannot disable your own account")
+			response.Fail(c, 400, 4001, "不能停用自己的账号")
 		case errors.Is(err, service.ErrLastActiveUser):
-			response.Fail(c, 400, 4001, "cannot disable the last active user")
+			response.Fail(c, 400, 4001, "不能停用最后一个启用中的用户")
 		default:
 			response.ServerError(c, err.Error())
 		}

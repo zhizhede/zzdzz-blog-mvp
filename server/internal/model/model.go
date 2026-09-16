@@ -22,6 +22,9 @@ type User struct {
 	UUID     string `gorm:"column:uuid;size:36;not null;index" json:"uuid"`
 	Username string `gorm:"size:64;not null;index" json:"username"`
 	PasswordHash string `gorm:"size:128;not null" json:"-"`
+	// PasswordHint 密码提示(0015): 注册时选填的自由文本, 忘记密码时按用户名公开可查.
+	// 明文存储——它本来就是设计给人看的, 不是机密; NULL 视为未设置.
+	PasswordHint string `gorm:"size:255" json:"password_hint"`
 	IsActive     bool   `gorm:"not null;default:true" json:"is_active"`
 	// IsAdmin 标记超级管理员. 当前由 service.Login 根据 ZZDZZ_ADMIN_USERNAMES 推断回填,
 	// 数据库 schema 暂未落列; gorm 默认值 false, 真正取值以 service 为准.

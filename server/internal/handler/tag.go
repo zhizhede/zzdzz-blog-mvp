@@ -41,7 +41,7 @@ func (h *TagHandler) Create(c *gin.Context) {
 	t, err := h.svc.Create(req.Name, req.Slug)
 	if err != nil {
 		if errors.Is(err, service.ErrTagNameTaken) {
-			response.Fail(c, 409, 4009, "tag name or slug already exists")
+			response.Fail(c, 409, 4009, "标签名或别名已存在")
 			return
 		}
 		response.BadRequest(c, err.Error())
@@ -53,7 +53,7 @@ func (h *TagHandler) Create(c *gin.Context) {
 func (h *TagHandler) Update(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
-		response.BadRequest(c, "invalid id")
+		response.BadRequest(c, "无效的 ID")
 		return
 	}
 	var req tagReq
@@ -65,9 +65,9 @@ func (h *TagHandler) Update(c *gin.Context) {
 	if err != nil {
 		switch {
 		case errors.Is(err, service.ErrTagNotFound):
-			response.Fail(c, 404, 4004, "tag not found")
+			response.Fail(c, 404, 4004, "标签不存在")
 		case errors.Is(err, service.ErrTagNameTaken):
-			response.Fail(c, 409, 4009, "tag name or slug already exists")
+			response.Fail(c, 409, 4009, "标签名或别名已存在")
 		default:
 			response.BadRequest(c, err.Error())
 		}
@@ -79,12 +79,12 @@ func (h *TagHandler) Update(c *gin.Context) {
 func (h *TagHandler) Delete(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
-		response.BadRequest(c, "invalid id")
+		response.BadRequest(c, "无效的 ID")
 		return
 	}
 	if err := h.svc.Delete(id); err != nil {
 		if errors.Is(err, service.ErrTagNotFound) {
-			response.Fail(c, 404, 4004, "tag not found")
+			response.Fail(c, 404, 4004, "标签不存在")
 			return
 		}
 		response.ServerError(c, err.Error())
