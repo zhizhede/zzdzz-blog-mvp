@@ -107,7 +107,7 @@ const pwdDialog = ref(false)
   gap: 12px;
 }
 .side-head { display: flex; flex-direction: column; gap: 10px; }
-.side-title { font-size: 24px; margin: 0; }
+.side-title { font-size: 30px; margin: 0; }
 .side-nav { display: flex; flex-direction: column; gap: 2px; }
 .side-item {
   display: flex;
@@ -117,7 +117,7 @@ const pwdDialog = ref(false)
   border: 0;
   text-align: left;
   font-family: var(--font-body);
-  font-size: 14px;
+  font-size: 17.5px;
   color: var(--ink-soft);
   padding: 10px 12px;
   border-radius: var(--radius);
@@ -128,7 +128,7 @@ const pwdDialog = ref(false)
   margin-left: auto;
   font-style: normal;
   color: var(--ink-faint);
-  font-size: 10px;
+  font-size: 12.5px;
   letter-spacing: 0.16em;
 }
 .side-item:hover { background: var(--bg-sunken); color: var(--ink); }
@@ -140,7 +140,7 @@ const pwdDialog = ref(false)
 .side-item.active :deep(.el-icon) { color: var(--ink-on-inverse); }
 .rule { border: 0; border-top: 1px solid var(--rule); margin: 8px 0; }
 .side-hint {
-  font-size: 11px;
+  font-size: 13.75px;
   line-height: 1.6;
   color: var(--ink-mute);
   margin: 0;

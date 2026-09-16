@@ -331,8 +331,8 @@ const statusText = computed(() => {
 <style scoped>
 .page { display: flex; flex-direction: column; gap: 24px; padding-bottom: 64px; }
 .page-head { display: flex; flex-direction: column; gap: 10px; }
-.title { font-size: 32px; line-height: 1.1; margin: 0; letter-spacing: -0.6px; }
-.status { color: var(--ink-mute); font-size: 12px; margin: 0; }
+.title { font-size: 40px; line-height: 1.1; margin: 0; letter-spacing: -0.6px; }
+.status { color: var(--ink-mute); font-size: 15px; margin: 0; }
 .status.error { color: var(--danger); }
 
 .grid {
@@ -342,22 +342,22 @@ const statusText = computed(() => {
 }
 .col { display: flex; flex-direction: column; gap: 16px; }
 .field { display: flex; flex-direction: column; gap: 6px; }
-.label { color: var(--ink-mute); font-size: 11px; text-transform: uppercase; letter-spacing: 0.16em; }
+.label { color: var(--ink-mute); font-size: 13.75px; text-transform: uppercase; letter-spacing: 0.16em; }
 .input {
   background: transparent;
   border: 0;
   border-bottom: 1px solid var(--rule-soft);
   padding: 8px 0;
   font-family: var(--font-body);
-  font-size: 14px;
+  font-size: 17.5px;
   color: var(--ink);
   outline: none;
   width: 100%;
   box-sizing: border-box;
 }
 .input:focus { border-bottom-color: var(--ink); }
-.title-input { font-size: 22px; font-family: var(--font-display); font-weight: 500; }
-.mono-area { font-family: var(--font-mono); font-size: 13px; line-height: 1.7; }
+.title-input { font-size: 27.5px; font-family: var(--font-display); font-weight: 500; }
+.mono-area { font-family: var(--font-mono); font-size: 16.25px; line-height: 1.7; }
 .row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
 
 .vis-row { display: flex; gap: 6px; }
@@ -367,7 +367,7 @@ const statusText = computed(() => {
   padding: 6px 12px;
   border-radius: var(--radius);
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: 13.75px;
   letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--ink-soft);
@@ -384,14 +384,14 @@ const statusText = computed(() => {
   padding: 4px 10px;
   border-radius: 999px;
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: 13.75px;
   color: var(--ink-soft);
   cursor: pointer;
   transition: all var(--transition);
 }
 .tag-btn:hover { color: var(--ink); border-color: var(--ink-mute); }
 .tag-btn.active { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
-.muted { color: var(--ink-mute); font-size: 12px; }
+.muted { color: var(--ink-mute); font-size: 15px; }
 
 .actions { display: flex; gap: 12px; justify-content: flex-end; padding-top: 8px; }
 .text-btn {
@@ -410,7 +410,7 @@ const statusText = computed(() => {
   padding: 10px 20px;
   border-radius: var(--radius);
   font-family: var(--font-mono);
-  font-size: 12px;
+  font-size: 15px;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   cursor: pointer;
@@ -433,7 +433,7 @@ const statusText = computed(() => {
   background: var(--bg-sunken);
 }
 .preview-body { padding: 24px; }
-.preview-title { font-size: 24px; line-height: 1.15; margin: 0 0 12px; }
+.preview-title { font-size: 30px; line-height: 1.15; margin: 0 0 12px; }
 .preview-summary {
   border-left: 2px solid var(--accent);
   padding-left: 12px;
@@ -444,7 +444,7 @@ const statusText = computed(() => {
 .preview-md {
   white-space: pre-wrap;
   font-family: var(--font-mono);
-  font-size: 13px;
+  font-size: 16.25px;
   line-height: 1.7;
   color: var(--ink-soft);
   margin: 0;

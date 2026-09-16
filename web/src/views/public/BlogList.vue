@@ -4,6 +4,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { articleApi, categoryApi, tagApi, type Article, type Category, type TagWithCount } from '../../api'
 import IssueTag from '../../components/IssueTag.vue'
 import TagCloud from '../../components/TagCloud.vue'
+import Markdown from '../../components/Markdown.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -81,15 +82,9 @@ const goPage = (p: number) => {
 
 const categoryName = (id: number) =>
   categories.value.find((c) => c.id === id)?.name || '未分类'
-// 没写摘要时取正文前 200 字,去掉 markdown 标记和换行
-const summary = (a: Article) =>
-  a.summary ||
-  a.content
-    .replace(/```[\s\S]*?```/g, ' ')
-    .replace(/[#>*`~\[\]!-]/g, '')
-    .replace(/\s+/g, ' ')
-    .trim()
-    .slice(0, 200)
+// 卡片里直接渲染正文预览, 显示量交给 CSS 的 max-height 裁切; 原始 markdown
+// 截前 1500 字即可保证填满裁切区, 避免整篇长文渲染 20 份 DOM
+const preview = (a: Article) => a.content.slice(0, 1500)
 const readMinutes = (a: Article) => Math.max(1, Math.round(a.content.length / 400))
 
 onMounted(() => {
@@ -158,7 +153,13 @@ onMounted(() => {
             >#{{ tags.find((t) => t.id === tid)?.name || tid }}</span>
           </template>
         </div>
-        <p class="post-excerpt">{{ summary(a) }}</p>
+        <p v-if="a.summary" class="post-summary">
+          <span class="mono sum-tag">SUMMARY</span>{{ a.summary }}
+        </p>
+        <div class="post-body">
+          <Markdown :source="preview(a)" />
+          <span class="fade" aria-hidden="true" />
+        </div>
       </router-link>
       <div v-if="!filtered.length && !loading" class="empty">这一过滤条件下还没有内容。</div>
       <div v-if="loading" class="empty">加载中…</div>
@@ -183,7 +184,7 @@ onMounted(() => {
   border-bottom: 1px solid var(--rule);
 }
 .hero-title {
-  font-size: 56px;
+  font-size: 70px;
   line-height: 1;
   margin: 0;
   letter-spacing: -1.2px;
@@ -195,7 +196,7 @@ onMounted(() => {
 }
 .hero-lede {
   color: var(--ink-soft);
-  font-size: 16px;
+  font-size: 20px;
   max-width: 540px;
   margin: 0;
 }
@@ -206,7 +207,7 @@ onMounted(() => {
   border-radius: var(--radius);
   padding: 10px 22px;
   font-family: var(--font-mono);
-  font-size: 12px;
+  font-size: 15px;
   letter-spacing: 0.1em;
   text-transform: uppercase;
   text-decoration: none;
@@ -224,7 +225,7 @@ onMounted(() => {
   background: transparent;
   border: 0;
   font-family: var(--font-body);
-  font-size: 14px;
+  font-size: 17.5px;
   color: var(--ink-soft);
   padding: 6px 12px;
   border-radius: var(--radius);
@@ -234,16 +235,16 @@ onMounted(() => {
 .cat:hover { color: var(--ink); }
 .cat.active { background: var(--ink); color: var(--ink-on-inverse); }
 .hairline { border: 0; border-top: 1px solid var(--rule); }
-.list { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+.list { display: grid; grid-template-columns: 1fr; gap: 28px; }
 .post-card {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 12px;
   text-decoration: none;
   background: var(--bg-elev);
   border: 1px solid var(--rule-soft);
   border-radius: var(--radius);
-  padding: 24px;
+  padding: 28px 32px;
   cursor: pointer;
   transition: transform var(--transition), border-color var(--transition), box-shadow var(--transition);
 }
@@ -253,7 +254,7 @@ onMounted(() => {
   box-shadow: 0 6px 18px rgba(0, 0, 0, 0.06);
 }
 .post-title {
-  font-size: 24px;
+  font-size: 30px;
   line-height: 1.25;
   margin: 0;
   color: var(--ink);
@@ -265,13 +266,13 @@ onMounted(() => {
   align-items: center;
   gap: 6px 8px;
   color: var(--ink-mute);
-  font-size: 12px;
+  font-size: 15px;
 }
 .post-meta .cat-tag {
   font-family: var(--font-mono);
   text-transform: uppercase;
   letter-spacing: 0.1em;
-  font-size: 11px;
+  font-size: 13.75px;
   color: var(--accent);
 }
 .post-meta .dot {
@@ -285,15 +286,59 @@ onMounted(() => {
   font-family: var(--font-mono);
   color: var(--ink-mute);
 }
-.post-excerpt {
-  color: var(--ink-soft);
-  font-size: 14.5px;
-  line-height: 1.8;
+/* 摘要: 作者手写的导读, 和正文预览视觉上区分(左侧强调线 + 斜体) */
+.post-summary {
   margin: 0;
-  display: -webkit-box;
-  -webkit-line-clamp: 4;
-  -webkit-box-orient: vertical;
+  padding: 2px 0 2px 12px;
+  border-left: 2px solid var(--accent);
+  color: var(--ink-soft);
+  font-size: 16.875px;
+  font-style: italic;
+  line-height: 1.7;
+}
+.post-summary .sum-tag {
+  color: var(--accent);
+  font-size: 12.5px;
+  letter-spacing: 0.16em;
+  margin-right: 10px;
+  font-style: normal;
+  text-transform: uppercase;
+}
+/* 正文预览: 显示量以卡片高度为上限, 超出部分裁掉, 底部渐隐暗示还有内容 */
+.post-body {
+  position: relative;
+  max-height: 280px;
   overflow: hidden;
+  color: var(--ink-soft);
+}
+.post-body :deep(.prose) {
+  font-size: 18.125px;
+  line-height: 1.8;
+  color: var(--ink-soft);
+}
+.post-body :deep(.prose) h1,
+.post-body :deep(.prose) h2,
+.post-body :deep(.prose) h3,
+.post-body :deep(.prose) h4 {
+  font-size: 20px;
+  line-height: 1.5;
+  margin: 0.6em 0 0.3em;
+}
+.post-body :deep(.prose) p { margin: 0 0 0.5em; }
+.post-body :deep(.prose) pre {
+  white-space: pre-wrap;
+  word-break: break-all;
+  margin: 0.4em 0;
+}
+.post-body :deep(.prose) img { max-width: 100%; }
+.post-body .fade {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 72px;
+  background: linear-gradient(rgba(255, 255, 255, 0), var(--bg-elev));
+  pointer-events: none;
 }
 .empty {
   grid-column: 1 / -1;
@@ -315,15 +360,16 @@ onMounted(() => {
   padding: 8px 16px;
   border-radius: var(--radius);
   font-family: var(--font-body);
-  font-size: 13px;
+  font-size: 16.25px;
   color: var(--ink-soft);
   cursor: pointer;
 }
 .pager-btn:hover:not(:disabled) { color: var(--ink); border-color: var(--ink-mute); }
 .pager-btn:disabled { color: var(--ink-faint); cursor: not-allowed; }
-.pager-info { color: var(--ink-mute); font-size: 12px; }
+.pager-info { color: var(--ink-mute); font-size: 15px; }
 @media (max-width: 760px) {
-  .hero-title { font-size: 36px; }
+  .hero-title { font-size: 45px; }
   .list { grid-template-columns: 1fr; }
+  .post-card { padding: 22px; }
 }
 </style>

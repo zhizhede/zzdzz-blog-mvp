@@ -1,10 +1,14 @@
 <script setup lang="ts">
-import { nextTick, onMounted, reactive, ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { nextTick, onMounted, onUnmounted, reactive, ref } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { aiApi, type AIConversation, type AIMessage } from '../../api/ai'
 import { useUserStore } from '../../stores/user'
 import IssueTag from '../../components/IssueTag.vue'
+
+// 同一组件挂在 /admin/ai 与 /space/ai 两处, 角标前缀按所在区域显示
+const route = useRoute()
+const issuePrefix = route.path.startsWith('/space') ? 'SPACE' : 'ADMIN'
 
 // 引用来源: 后端召回命中时, 作为首个 SSE 事件的 sources 字段推送
 interface RecallSource {
@@ -32,12 +36,52 @@ const messages = ref<Msg[]>([])
 const input = ref('')
 const sending = ref(false)
 const scrollBox = ref<HTMLElement | null>(null)
+const aiPage = ref<HTMLElement | null>(null)
 const renameDialogVisible = ref(false)
 const renameValue = ref('')
 
-const scrollToBottom = async () => {
+// 聊天区占满视口剩余高度: 输入区钉在底部, 只有消息列表内部滚动。
+// 高度实测而非写死 calc 常数, 页头/布局内边距以后调整也不会漂移。
+const BOTTOM_RESERVE = 64
+const chatHeight = ref('560px')
+const measureChat = () => {
+  const el = aiPage.value
+  if (!el) return
+  const top = el.getBoundingClientRect().top
+  chatHeight.value = `${Math.max(420, window.innerHeight - top - BOTTOM_RESERVE)}px`
+}
+
+// force=false 时仅在用户本来就在底部附近才吸附到底, 避免流式输出把上翻阅读的用户拽回去
+const scrollToBottom = async (force = true) => {
   await nextTick()
-  if (scrollBox.value) scrollBox.value.scrollTop = scrollBox.value.scrollHeight
+  const el = scrollBox.value
+  if (!el) return
+  const nearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 80
+  if (force || nearBottom) el.scrollTop = el.scrollHeight
+}
+
+// MiniMax 系模型会在回答里输出 <think>…</think> 思考文本, 拆出来单独展示,
+// 不和正文混在一起。thinking=true 表示流式输出还没收到 </think>(思考进行中)。
+interface ParsedMsg {
+  think: string
+  answer: string
+  thinking: boolean
+}
+const parseThink = (raw: string): ParsedMsg => {
+  const open = raw.indexOf('<think>')
+  if (open === -1) return { think: '', answer: raw, thinking: false }
+  const close = raw.indexOf('</think>')
+  const think = (close === -1 ? raw.slice(open + 7) : raw.slice(open + 7, close)).trim()
+  const answer = (raw.slice(0, open) + (close === -1 ? '' : raw.slice(close + 8))).trim()
+  return { think, answer, thinking: close === -1 }
+}
+const parsedOf = (m: Msg): ParsedMsg => parseThink(m.content)
+
+// 思考块折叠状态: 键为消息下标; 未手动点过时, 思考进行中默认展开, 结束后默认收起
+const thinkManual = ref<Record<number, boolean>>({})
+const thinkVisible = (i: number, p: ParsedMsg) => thinkManual.value[i] ?? p.thinking
+const toggleThink = (i: number) => {
+  thinkManual.value[i] = !thinkVisible(i, parsedOf(messages.value[i]))
 }
 
 const loadConversations = async () => {
@@ -163,7 +207,7 @@ const send = async () => {
           }
         } catch {}
       }
-      scrollToBottom()
+      scrollToBottom(false)
     }
     aiMsg.pending = false
     await loadConversations()
@@ -172,26 +216,34 @@ const send = async () => {
     aiMsg.pending = false
   } finally {
     sending.value = false
-    scrollToBottom()
+    scrollToBottom(false)
   }
 }
 
-onMounted(loadConversations)
+onMounted(() => {
+  loadConversations()
+  measureChat()
+  requestAnimationFrame(measureChat)
+  window.addEventListener('resize', measureChat)
+})
+onUnmounted(() => window.removeEventListener('resize', measureChat))
 </script>
 
 <template>
   <div class="page">
     <div class="page-head">
-      <IssueTag prefix="ADMIN" text="AI" suffix="MiniMax-M3" />
       <div class="head-row">
-        <h1 class="display title">AI 对话</h1>
+        <div class="head-left">
+          <IssueTag :prefix="issuePrefix" text="AI" suffix="MiniMax-M3" />
+          <h1 class="display title">AI 对话</h1>
+        </div>
         <div class="head-tools">
           <button class="text-btn" :disabled="!currentConvId" @click="openRename">重命名</button>
         </div>
       </div>
     </div>
 
-    <div class="ai-page">
+    <div ref="aiPage" class="ai-page" :style="{ '--chat-h': chatHeight }">
       <aside class="sidebar">
         <div class="sidebar-head">
           <p class="mono tag">SESSIONS · {{ conversations.length }}</p>
@@ -221,9 +273,21 @@ onMounted(loadConversations)
           <div v-for="(m, i) in messages" :key="i" :class="['msg', m.role]">
             <div class="bubble">
               <span class="role-tag mono">{{ m.role === 'user' ? 'YOU' : 'AI' }}</span>
-              <span class="bubble-text">
-                {{ m.content }}<span v-if="m.pending" class="cursor">▍</span>
-              </span>
+              <template v-if="m.role === 'assistant'">
+                <div v-if="parsedOf(m).think || parsedOf(m).thinking" class="think-box">
+                  <button class="think-toggle mono" @click="toggleThink(i)">
+                    <span class="think-arrow">{{ thinkVisible(i, parsedOf(m)) ? '▾' : '▸' }}</span>
+                    {{ parsedOf(m).thinking ? '思考中…' : '思考过程' }}
+                  </button>
+                  <div v-show="thinkVisible(i, parsedOf(m))" class="think-content">
+                    {{ parsedOf(m).think }}<span v-if="parsedOf(m).thinking" class="cursor">▍</span>
+                  </div>
+                </div>
+                <span class="bubble-text">
+                  {{ parsedOf(m).answer }}<span v-if="m.pending" class="cursor">▍</span>
+                </span>
+              </template>
+              <span v-else class="bubble-text">{{ m.content }}</span>
               <div v-if="m.sources?.length" class="src-row">
                 <span class="mono src-label">引用</span>
                 <button
@@ -282,16 +346,20 @@ onMounted(loadConversations)
 </template>
 
 <style scoped>
-.page { display: flex; flex-direction: column; gap: 16px; padding-bottom: 32px; }
-.page-head { display: flex; flex-direction: column; gap: 8px; }
-.head-row { display: flex; justify-content: space-between; align-items: baseline; }
-.title { font-size: 32px; line-height: 1; margin: 0; letter-spacing: -0.6px; }
+/* 压缩本页垂直装饰, 把纵向空间让给消息阅读区 (全站字号统一在全局缩放) */
+.page {
+  padding: 16px 0 0;
+}
+.page-head { display: flex; flex-direction: column; gap: 8px; margin-bottom: 0; padding-top: 12px; }
+.head-row { display: flex; justify-content: space-between; align-items: center; }
+.head-left { display: flex; align-items: center; gap: 14px; }
+.title { font-size: 25px; line-height: 1; margin: 0; letter-spacing: -0.3px; }
 .head-tools { display: flex; gap: 12px; }
 
-.ai-page { display: flex; gap: 16px; min-height: calc(100vh - 200px); }
+.ai-page { display: flex; gap: 16px; height: var(--chat-h, 560px); }
 
 .sidebar {
-  width: 260px;
+  width: 220px;
   display: flex;
   flex-direction: column;
   background: var(--bg-elev);
@@ -301,7 +369,7 @@ onMounted(loadConversations)
   gap: 12px;
 }
 .sidebar-head { display: flex; justify-content: space-between; align-items: center; padding-bottom: 8px; border-bottom: 1px solid var(--rule-soft); }
-.sidebar-head .tag { color: var(--ink-mute); margin: 0; }
+.sidebar-head .tag { color: var(--ink-mute); margin: 0; font-size: 15px; }
 .primary-btn {
   background: var(--ink);
   color: var(--ink-on-inverse);
@@ -309,7 +377,7 @@ onMounted(loadConversations)
   padding: 8px 14px;
   border-radius: var(--radius);
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: 13.75px;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   cursor: pointer;
@@ -325,14 +393,14 @@ onMounted(loadConversations)
   border-bottom: 1px solid var(--rule-soft);
   padding: 4px 0;
   font-family: var(--font-body);
-  font-size: 13px;
+  font-size: 16.25px;
   color: var(--ink);
   cursor: pointer;
 }
 .text-btn:hover { color: var(--accent); border-bottom-color: var(--accent); }
 .text-btn:disabled { color: var(--ink-faint); cursor: not-allowed; border-bottom-color: transparent; }
 
-.conv-list { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 2px; }
+.conv-list { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 2px; }
 .conv-item {
   display: flex;
   justify-content: space-between;
@@ -344,23 +412,24 @@ onMounted(loadConversations)
 }
 .conv-item:hover { background: var(--bg-sunken); }
 .conv-item.active { background: var(--ink); color: var(--ink-on-inverse); }
-.conv-title { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; }
-.del-btn { visibility: hidden; font-size: 11px; }
+.conv-title { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 16.25px; }
+.del-btn { visibility: hidden; font-size: 13.75px; }
 .conv-item:hover .del-btn { visibility: visible; color: var(--danger); }
 .conv-item.active .del-btn { color: var(--ink-on-inverse); border-color: var(--ink-on-inverse); }
-.empty { color: var(--ink-mute); padding: 12px; font-size: 12px; text-align: center; }
+.empty { color: var(--ink-mute); padding: 12px; font-size: 15px; text-align: center; }
 
 .chat-pane { flex: 1; display: flex; flex-direction: column; min-width: 0; gap: 12px; }
 .messages {
   flex: 1;
+  min-height: 0;
   overflow-y: auto;
-  padding: 20px;
+  padding: 16px 18px;
   background: var(--bg-elev);
   border: 1px solid var(--rule-soft);
   border-radius: var(--radius);
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 12px;
 }
 .msg { display: flex; }
 .msg.user { justify-content: flex-end; }
@@ -372,14 +441,15 @@ onMounted(loadConversations)
   white-space: pre-wrap;
   word-break: break-word;
   line-height: 1.7;
-  font-size: 14px;
+  font-size: 17.5px;
   border: 1px solid var(--rule-soft);
 }
 .msg.user .bubble { background: var(--ink); color: var(--ink-on-inverse); border-color: var(--ink); }
-.msg.assistant .bubble { background: var(--bg); color: var(--ink); }
+/* AI 回答是主要阅读对象, 放开宽度限制占满整行 */
+.msg.assistant .bubble { background: var(--bg); color: var(--ink); max-width: 100%; }
 .role-tag {
   display: inline-block;
-  font-size: 10px;
+  font-size: 12.5px;
   letter-spacing: 0.16em;
   color: var(--ink-mute);
   margin-right: 8px;
@@ -388,6 +458,39 @@ onMounted(loadConversations)
 .msg.user .role-tag { color: var(--ink-on-inverse); opacity: 0.7; }
 .cursor { display: inline-block; animation: blink 1s infinite; margin-left: 2px; }
 @keyframes blink { 50% { opacity: 0; } }
+/* AI 思考文本: 与正文分开展示, 折叠可查 */
+.think-box {
+  border: 1px dashed var(--rule);
+  border-radius: var(--radius);
+  background: var(--bg-sunken);
+  padding: 8px 12px;
+  margin-bottom: 10px;
+}
+.think-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: transparent;
+  border: 0;
+  padding: 0;
+  font-size: 13.75px;
+  letter-spacing: 0.1em;
+  color: var(--ink-mute);
+  cursor: pointer;
+}
+.think-toggle:hover { color: var(--accent); }
+.think-arrow { font-size: 12.5px; }
+/* 思考文本展开时必须全文铺开 (滚动交给外层消息列表), 禁止 max-height + 内部滚动条 */
+.think-content {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px dashed var(--rule);
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-size: 16.25px;
+  line-height: 1.7;
+  color: var(--ink-mute);
+}
 .src-row {
   display: flex;
   flex-wrap: wrap;
@@ -397,13 +500,13 @@ onMounted(loadConversations)
   padding-top: 8px;
   border-top: 1px solid var(--rule-soft);
 }
-.src-label { font-size: 10px; letter-spacing: 0.16em; color: var(--ink-mute); text-transform: uppercase; }
+.src-label { font-size: 12.5px; letter-spacing: 0.16em; color: var(--ink-mute); text-transform: uppercase; }
 .src-chip {
   background: var(--bg-sunken);
   border: 1px solid var(--rule-soft);
   border-radius: 999px;
   padding: 3px 10px;
-  font-size: 11px;
+  font-size: 13.75px;
   color: var(--ink);
   cursor: pointer;
   max-width: 260px;
@@ -413,7 +516,7 @@ onMounted(loadConversations)
 }
 .src-chip:hover { border-color: var(--accent); color: var(--accent); }
 .src-idx { color: var(--ink-mute); margin-right: 4px; }
-.hint { color: var(--ink-mute); text-align: center; padding: 60px 0; font-style: italic; }
+.hint { color: var(--ink-mute); text-align: center; padding: 40px 0; margin: auto; font-style: italic; }
 .composer { display: flex; gap: 8px; align-items: stretch; }
 .composer-input {
   flex: 1;
@@ -422,7 +525,7 @@ onMounted(loadConversations)
   border-radius: var(--radius);
   padding: 12px;
   font-family: var(--font-body);
-  font-size: 14px;
+  font-size: 17.5px;
   color: var(--ink);
   outline: none;
   resize: vertical;
@@ -432,11 +535,19 @@ onMounted(loadConversations)
 
 .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 100; }
 .dialog { background: var(--bg); border: 1px solid var(--rule); border-radius: var(--radius); padding: 28px; width: 420px; display: flex; flex-direction: column; gap: 16px; }
-.d-tag { color: var(--accent); margin: 0; }
-.d-title { font-size: 24px; margin: 0; }
+.d-tag { color: var(--accent); margin: 0; font-size: 15px; }
+.d-title { font-size: 30px; margin: 0; }
 .field { display: flex; flex-direction: column; gap: 6px; }
-.label { color: var(--ink-mute); font-size: 11px; text-transform: uppercase; letter-spacing: 0.16em; }
-.input { background: transparent; border: 0; border-bottom: 1px solid var(--rule-soft); padding: 8px 0; font-family: var(--font-body); font-size: 14px; color: var(--ink); outline: none; }
+.label { color: var(--ink-mute); font-size: 13.75px; text-transform: uppercase; letter-spacing: 0.16em; }
+.input { background: transparent; border: 0; border-bottom: 1px solid var(--rule-soft); padding: 8px 0; font-family: var(--font-body); font-size: 17.5px; color: var(--ink); outline: none; }
 .input:focus { border-bottom-color: var(--ink); }
 .d-row { display: flex; gap: 12px; justify-content: flex-end; padding-top: 8px; }
+
+/* 窄屏放弃视口内定高, 退回常规文档流, 会话列表与消息区各自限高滚动 */
+@media (max-width: 900px) {
+  .ai-page { flex-direction: column; height: auto; }
+  .sidebar { width: auto; }
+  .conv-list { flex: none; max-height: 180px; }
+  .messages { flex: none; max-height: 62vh; }
+}
 </style>

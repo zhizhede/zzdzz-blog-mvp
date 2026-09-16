@@ -112,7 +112,7 @@ onMounted(fetchList)
 .page { display: flex; flex-direction: column; gap: 24px; padding-bottom: 64px; }
 .page-head { display: flex; flex-direction: column; gap: 12px; }
 .head-row { display: flex; justify-content: space-between; align-items: baseline; }
-.title { font-size: 36px; line-height: 1; margin: 0; letter-spacing: -0.8px; }
+.title { font-size: 45px; line-height: 1; margin: 0; letter-spacing: -0.8px; }
 .primary-btn {
   background: var(--ink);
   color: var(--ink-on-inverse);
@@ -120,7 +120,7 @@ onMounted(fetchList)
   padding: 10px 18px;
   border-radius: var(--radius);
   font-family: var(--font-mono);
-  font-size: 12px;
+  font-size: 15px;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   cursor: pointer;
@@ -145,10 +145,10 @@ onMounted(fetchList)
   transition: all var(--transition);
 }
 .cat-card:hover { border-color: var(--ink); transform: translateY(-2px); }
-.cat-meta { display: flex; justify-content: space-between; color: var(--ink-mute); font-size: 11px; }
+.cat-meta { display: flex; justify-content: space-between; color: var(--ink-mute); font-size: 13.75px; }
 .cat-meta .count { color: var(--accent); }
-.cat-name { font-size: 22px; margin: 0; }
-.cat-slug { color: var(--ink-mute); font-size: 12px; margin: 0; }
+.cat-name { font-size: 27.5px; margin: 0; }
+.cat-slug { color: var(--ink-mute); font-size: 15px; margin: 0; }
 .cat-actions { display: flex; gap: 12px; padding-top: 6px; border-top: 1px solid var(--rule-soft); margin-top: 4px; }
 .text-btn {
   background: transparent;
@@ -156,7 +156,7 @@ onMounted(fetchList)
   border-bottom: 1px solid var(--rule-soft);
   padding: 4px 0;
   font-family: var(--font-body);
-  font-size: 13px;
+  font-size: 16.25px;
   color: var(--ink);
   cursor: pointer;
 }
@@ -181,16 +181,16 @@ onMounted(fetchList)
   gap: 16px;
 }
 .d-tag { color: var(--accent); margin: 0; }
-.d-title { font-size: 24px; margin: 0; }
+.d-title { font-size: 30px; margin: 0; }
 .field { display: flex; flex-direction: column; gap: 6px; }
-.label { color: var(--ink-mute); font-size: 11px; text-transform: uppercase; letter-spacing: 0.16em; }
+.label { color: var(--ink-mute); font-size: 13.75px; text-transform: uppercase; letter-spacing: 0.16em; }
 .input {
   background: transparent;
   border: 0;
   border-bottom: 1px solid var(--rule-soft);
   padding: 8px 0;
   font-family: var(--font-body);
-  font-size: 14px;
+  font-size: 17.5px;
   color: var(--ink);
   outline: none;
 }

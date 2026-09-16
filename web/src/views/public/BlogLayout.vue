@@ -89,7 +89,7 @@ const handleLogin = () => {
   max-width: 800px; margin: 0 auto; padding: 16px 24px;
   display: flex; align-items: center; justify-content: space-between;
 }
-.brand { margin: 0; font-size: 20px; cursor: pointer; letter-spacing: 1px; }
+.brand { margin: 0; font-size: 25px; cursor: pointer; letter-spacing: 1px; }
 .right { display: flex; align-items: center; gap: 12px; }
 .user-trigger {
   display: inline-flex; align-items: center; cursor: pointer;
@@ -99,7 +99,7 @@ const handleLogin = () => {
 .login-link { color: #409eff; cursor: pointer; }
 .blog-main { flex: 1; max-width: 800px; margin: 0 auto; padding: 32px 24px; width: 100%; box-sizing: border-box; }
 .blog-footer { text-align: center; padding: 20px; color: #909399; border-top: 1px solid #ebeef5; background: #fff; }
-.beian { margin-top: 6px; font-size: 12px; }
+.beian { margin-top: 6px; font-size: 15px; }
 .beian a { color: #909399; }
 .beian a:hover { color: #409eff; }
 a { color: #409eff; text-decoration: none; }

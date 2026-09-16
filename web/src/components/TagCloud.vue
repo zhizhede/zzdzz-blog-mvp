@@ -29,7 +29,7 @@ const max = computed(() => Math.max(1, ...ranked.value.map((r) => r.count)))
       :tag="t"
       :count="t.count"
       :active="props.activeTagId === t.id"
-      :style="{ fontSize: 11 + (t.count / max) * 6 + 'px' }"
+      :style="{ fontSize: 13.75 + (t.count / max) * 7.5 + 'px' }"
       @click="emit('select', t.id)"
     />
   </div>

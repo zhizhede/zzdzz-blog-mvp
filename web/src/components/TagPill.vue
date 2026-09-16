@@ -33,7 +33,7 @@ defineEmits<{ (e: 'click', tag: Tag): void }>()
   padding: 4px 10px;
   border-radius: 999px;
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: 13.75px;
   letter-spacing: 0.06em;
   cursor: pointer;
   transition: all var(--transition);
@@ -43,7 +43,7 @@ defineEmits<{ (e: 'click', tag: Tag): void }>()
 }
 .tag-pill .count {
   color: var(--ink-faint);
-  font-size: 10px;
+  font-size: 12.5px;
 }
 .tag-pill:hover {
   color: var(--ink);
