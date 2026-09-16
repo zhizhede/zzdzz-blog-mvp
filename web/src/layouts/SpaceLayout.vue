@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { Document, EditPen, User } from '@element-plus/icons-vue'
+import { Document, EditPen, User, ChatDotRound } from '@element-plus/icons-vue'
 import AppHeader from '../components/AppHeader.vue'
 import IssueTag from '../components/IssueTag.vue'
 import { useUserStore } from '../stores/user'
@@ -45,6 +45,12 @@ const isAdmin = computed(() => user.isAdmin)
           >
             <el-icon><User /></el-icon><span>个人资料</span>
           </button>
+          <button
+            :class="['side-item', active.startsWith('/space/ai') && 'active']"
+            @click="router.push('/space/ai')"
+          >
+            <el-icon><ChatDotRound /></el-icon><span>AI 对话</span>
+          </button>
         </nav>
         <p v-if="isAdmin" class="mono admin-hint">
           你是管理员,可在顶栏下拉前往后台。
@@ -79,9 +85,9 @@ const isAdmin = computed(() => user.isAdmin)
   gap: 12px;
 }
 .side-head { display: flex; flex-direction: column; gap: 10px; }
-.side-title { font-size: 24px; margin: 0; }
+.side-title { font-size: 30px; margin: 0; }
 .side-hint {
-  font-size: 11px;
+  font-size: 13.75px;
   line-height: 1.6;
   color: var(--ink-mute);
   margin: 0;
@@ -95,7 +101,7 @@ const isAdmin = computed(() => user.isAdmin)
   border: 0;
   text-align: left;
   font-family: var(--font-body);
-  font-size: 14px;
+  font-size: 17.5px;
   color: var(--ink-soft);
   padding: 10px 12px;
   border-radius: var(--radius);
@@ -110,7 +116,7 @@ const isAdmin = computed(() => user.isAdmin)
 .side-item.active :deep(.el-icon) { color: var(--ink-on-inverse); }
 .rule { border: 0; border-top: 1px solid var(--rule); margin: 4px 0; }
 .admin-hint {
-  font-size: 11px;
+  font-size: 13.75px;
   color: var(--ink-mute);
   margin: 8px 0 0;
   padding-top: 8px;

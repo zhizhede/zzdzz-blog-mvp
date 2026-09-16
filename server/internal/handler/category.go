@@ -35,13 +35,13 @@ func (h *CategoryHandler) List(c *gin.Context) {
 func (h *CategoryHandler) Create(c *gin.Context) {
 	var req categoryReq
 	if err := c.ShouldBindJSON(&req); err != nil {
-		response.BadRequest(c, "name required")
+		response.BadRequest(c, "请输入名称")
 		return
 	}
 	cat, err := h.svc.Create(service.CategoryInput{Name: req.Name, Slug: req.Slug})
 	if err != nil {
 		if errors.Is(err, service.ErrCategoryNameConflict) {
-			response.Fail(c, 409, 4009, "category name already exists")
+			response.Fail(c, 409, 4009, "分类名已存在")
 			return
 		}
 		response.ServerError(c, err.Error())
@@ -53,21 +53,21 @@ func (h *CategoryHandler) Create(c *gin.Context) {
 func (h *CategoryHandler) Update(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
-		response.BadRequest(c, "invalid id")
+		response.BadRequest(c, "无效的 ID")
 		return
 	}
 	var req categoryReq
 	if err := c.ShouldBindJSON(&req); err != nil {
-		response.BadRequest(c, "name required")
+		response.BadRequest(c, "请输入名称")
 		return
 	}
 	cat, err := h.svc.Update(id, service.CategoryInput{Name: req.Name, Slug: req.Slug})
 	if err != nil {
 		switch {
 		case errors.Is(err, service.ErrCategoryNotFound):
-			response.Fail(c, 404, 4004, "category not found")
+			response.Fail(c, 404, 4004, "分类不存在")
 		case errors.Is(err, service.ErrCategoryNameConflict):
-			response.Fail(c, 409, 4009, "category name already exists")
+			response.Fail(c, 409, 4009, "分类名已存在")
 		default:
 			response.ServerError(c, err.Error())
 		}
@@ -79,15 +79,15 @@ func (h *CategoryHandler) Update(c *gin.Context) {
 func (h *CategoryHandler) Delete(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
-		response.BadRequest(c, "invalid id")
+		response.BadRequest(c, "无效的 ID")
 		return
 	}
 	if err := h.svc.Delete(id); err != nil {
 		switch {
 		case errors.Is(err, service.ErrCategoryNotFound):
-			response.Fail(c, 404, 4004, "category not found")
+			response.Fail(c, 404, 4004, "分类不存在")
 		case errors.Is(err, service.ErrCategoryHasArticles):
-			response.Fail(c, 409, 4009, "category has articles, cannot delete")
+			response.Fail(c, 409, 4009, "分类下还有文章, 无法删除")
 		default:
 			response.ServerError(c, err.Error())
 		}

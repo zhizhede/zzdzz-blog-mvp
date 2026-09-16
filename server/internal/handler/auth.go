@@ -29,14 +29,14 @@ type loginReq struct {
 func (h *AuthHandler) Login(c *gin.Context) {
 	var req loginReq
 	if err := c.ShouldBindJSON(&req); err != nil {
-		response.BadRequest(c, "username and password required")
+		response.BadRequest(c, "请输入用户名和密码")
 		return
 	}
 
 	token, user, err := h.svc.Login(req.Username, req.Password)
 	if err != nil {
 		// 不区分"密码错误"和"账号被禁用", 避免泄漏账号存在性
-		response.Unauthorized(c, "invalid username or password")
+		response.Unauthorized(c, "用户名或密码错误")
 		return
 	}
 
@@ -48,25 +48,27 @@ func (h *AuthHandler) Login(c *gin.Context) {
 }
 
 type registerReq struct {
-	Username string `json:"username" binding:"required,min=3,max=64"`
-	Password string `json:"password" binding:"required,min=6,max=64"`
+	Username     string `json:"username" binding:"required,min=3,max=64"`
+	Password     string `json:"password" binding:"required,min=6,max=64"`
+	PasswordHint string `json:"password_hint" binding:"max=255"`
 }
 
 // Register 开放注册: 只需用户名 + 密码(用户名全系统唯一, 0014); 成功即返回 token(注册即登录).
+// password_hint 选填(0015), 忘记密码时可通过 /auth/password-hint 查看.
 func (h *AuthHandler) Register(c *gin.Context) {
 	var req registerReq
 	if err := c.ShouldBindJSON(&req); err != nil {
-		response.BadRequest(c, "username (3-64) and password (6-64) required")
+		response.BadRequest(c, "用户名需 3-64 字符, 密码需 6-64 字符")
 		return
 	}
 
-	token, user, err := h.svc.Register(req.Username, req.Password)
+	token, user, err := h.svc.Register(req.Username, req.Password, req.PasswordHint)
 	if err != nil {
 		switch {
 		case errors.Is(err, service.ErrUsernameConflict):
-			response.Fail(c, 409, 4009, "username already exists")
+			response.Fail(c, 409, 4009, "用户名已存在")
 		case errors.Is(err, service.ErrUsernameReserved):
-			response.Fail(c, 409, 4010, "username is reserved")
+			response.Fail(c, 409, 4010, "该用户名为保留名, 无法使用")
 		default:
 			response.ServerError(c, err.Error())
 		}
@@ -86,10 +88,59 @@ func (h *AuthHandler) Me(c *gin.Context) {
 	uname, _ := c.Get("username")
 	isAdmin, _ := c.Get("is_admin")
 	uuid := ""
+	hint := ""
 	if u, err := h.svc.GetByID(uid); err == nil {
 		uuid = u.UUID
+		hint = u.PasswordHint
 	}
-	response.OK(c, gin.H{"id": uid, "uuid": uuid, "username": uname, "is_admin": isAdmin})
+	response.OK(c, gin.H{"id": uid, "uuid": uuid, "username": uname, "is_admin": isAdmin, "password_hint": hint})
+}
+
+type changeOwnPasswordHintReq struct {
+	Password     string `json:"password" binding:"required"`
+	PasswordHint string `json:"password_hint" binding:"max=255"`
+}
+
+// ChangeOwnPasswordHint 登录用户改自己的密码提示(0015). 必须携带当前密码,
+// 验证通过才允许修改; 提示可为空串(表示清除提示).
+func (h *AuthHandler) ChangeOwnPasswordHint(c *gin.Context) {
+	uid := userIDOf(c)
+	if uid == 0 {
+		response.Unauthorized(c, "缺少用户身份")
+		return
+	}
+	var req changeOwnPasswordHintReq
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, "请输入当前密码, 提示最长 255 字")
+		return
+	}
+	if err := h.svc.ChangePasswordHint(uid, req.Password, req.PasswordHint); err != nil {
+		switch {
+		case errors.Is(err, service.ErrUserNotFound):
+			response.Fail(c, 404, 4004, "用户不存在")
+		case errors.Is(err, service.ErrInvalidOldPassword):
+			response.Fail(c, 400, 4001, "密码不正确")
+		default:
+			response.ServerError(c, err.Error())
+		}
+		return
+	}
+	response.OK(c, nil)
+}
+
+type passwordHintReq struct {
+	Username string `json:"username" binding:"required"`
+}
+
+// PasswordHint 忘记密码时按用户名查密码提示(0015). 公开接口(未登录态),
+// 用户不存在时同样返回空串, 不区分"无此用户"和"未设置提示".
+func (h *AuthHandler) PasswordHint(c *gin.Context) {
+	var req passwordHintReq
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, "请输入用户名")
+		return
+	}
+	response.OK(c, gin.H{"username": req.Username, "password_hint": h.svc.PasswordHint(req.Username)})
 }
 
 type changeOwnPasswordReq struct {
@@ -101,20 +152,20 @@ type changeOwnPasswordReq struct {
 func (h *AuthHandler) ChangeOwnPassword(c *gin.Context) {
 	uid := userIDOf(c)
 	if uid == 0 {
-		response.Unauthorized(c, "missing user id")
+		response.Unauthorized(c, "缺少用户身份")
 		return
 	}
 	var req changeOwnPasswordReq
 	if err := c.ShouldBindJSON(&req); err != nil {
-		response.BadRequest(c, "old_password and new_password (>=6) required")
+		response.BadRequest(c, "请输入旧密码, 新密码至少 6 位")
 		return
 	}
 	if err := h.svc.ChangePassword(uid, req.OldPassword, req.NewPassword); err != nil {
 		switch {
 		case errors.Is(err, service.ErrUserNotFound):
-			response.Fail(c, 404, 4004, "user not found")
+			response.Fail(c, 404, 4004, "用户不存在")
 		case errors.Is(err, service.ErrInvalidOldPassword):
-			response.Fail(c, 400, 4001, "old password incorrect")
+			response.Fail(c, 400, 4001, "旧密码不正确")
 		default:
 			response.ServerError(c, err.Error())
 		}
@@ -146,14 +197,14 @@ func RequireAuth(cfg *config.JWTConfig) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		h := c.GetHeader("Authorization")
 		if !strings.HasPrefix(h, "Bearer ") {
-			response.Unauthorized(c, "missing bearer token")
+			response.Unauthorized(c, "缺少登录凭证")
 			c.Abort()
 			return
 		}
 		tokenStr := strings.TrimPrefix(h, "Bearer ")
 		claims, err := jwtutil.Parse(cfg.Secret, tokenStr)
 		if err != nil {
-			response.Unauthorized(c, "invalid or expired token")
+			response.Unauthorized(c, "登录已失效, 请重新登录")
 			c.Abort()
 			return
 		}

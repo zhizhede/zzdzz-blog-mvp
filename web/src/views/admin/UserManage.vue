@@ -172,7 +172,7 @@ const toggleActive = async (u: User) => {
 .page { display: flex; flex-direction: column; gap: 24px; padding-bottom: 64px; }
 .page-head { display: flex; flex-direction: column; gap: 12px; }
 .head-row { display: flex; justify-content: space-between; align-items: baseline; }
-.title { font-size: 36px; line-height: 1; margin: 0; letter-spacing: -0.8px; }
+.title { font-size: 45px; line-height: 1; margin: 0; letter-spacing: -0.8px; }
 .primary-btn {
   background: var(--ink);
   color: var(--ink-on-inverse);
@@ -180,7 +180,7 @@ const toggleActive = async (u: User) => {
   padding: 10px 18px;
   border-radius: var(--radius);
   font-family: var(--font-mono);
-  font-size: 12px;
+  font-size: 15px;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   cursor: pointer;
@@ -195,7 +195,7 @@ const toggleActive = async (u: User) => {
   border-bottom: 1px solid var(--rule-soft);
   padding: 4px 0;
   font-family: var(--font-body);
-  font-size: 13px;
+  font-size: 16.25px;
   color: var(--ink);
   cursor: pointer;
 }
@@ -217,21 +217,21 @@ const toggleActive = async (u: User) => {
   border-radius: 50%;
   display: flex; align-items: center; justify-content: center;
   font-family: var(--font-display);
-  font-size: 16px;
+  font-size: 20px;
   font-weight: 600;
   border: 1px solid var(--rule-soft);
 }
 .avatar.admin { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
 .avatar.reader { background: var(--bg-sunken); color: var(--ink); }
 .who { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
-.name { font-family: var(--font-display); font-size: 15px; font-weight: 500; color: var(--ink); }
-.uid { font-size: 11px; color: var(--ink-mute); }
-.created { color: var(--ink-mute); font-size: 12px; }
+.name { font-family: var(--font-display); font-size: 18.75px; font-weight: 500; color: var(--ink); }
+.uid { font-size: 13.75px; color: var(--ink-mute); }
+.created { color: var(--ink-mute); font-size: 15px; }
 .actions { display: flex; gap: 12px; justify-content: flex-end; }
 
 .vis-pill {
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: 13.75px;
   text-transform: uppercase;
   letter-spacing: 0.08em;
   padding: 3px 8px;
@@ -247,10 +247,10 @@ const toggleActive = async (u: User) => {
 .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 100; }
 .dialog { background: var(--bg); border: 1px solid var(--rule); border-radius: var(--radius); padding: 28px; width: 420px; display: flex; flex-direction: column; gap: 16px; }
 .d-tag { color: var(--accent); margin: 0; }
-.d-title { font-size: 24px; margin: 0; }
+.d-title { font-size: 30px; margin: 0; }
 .field { display: flex; flex-direction: column; gap: 6px; }
-.label { color: var(--ink-mute); font-size: 11px; text-transform: uppercase; letter-spacing: 0.16em; }
-.input { background: transparent; border: 0; border-bottom: 1px solid var(--rule-soft); padding: 8px 0; font-family: var(--font-body); font-size: 14px; color: var(--ink); outline: none; }
+.label { color: var(--ink-mute); font-size: 13.75px; text-transform: uppercase; letter-spacing: 0.16em; }
+.input { background: transparent; border: 0; border-bottom: 1px solid var(--rule-soft); padding: 8px 0; font-family: var(--font-body); font-size: 17.5px; color: var(--ink); outline: none; }
 .input:focus { border-bottom-color: var(--ink); }
 .d-row { display: flex; gap: 12px; justify-content: flex-end; padding-top: 8px; }
 </style>

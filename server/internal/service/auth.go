@@ -80,7 +80,8 @@ func (s *AuthService) Login(username, password string) (string, *model.User, err
 
 // Register 开放注册: 用户名全系统唯一(0014 恢复), 重名返回 ErrUsernameConflict.
 // 保留名(ZZDZZ_ADMIN_USERNAMES, 默认 "admin")拒绝注册, 防止有人抢注 admin 身份.
-func (s *AuthService) Register(username, password string) (string, *model.User, error) {
+// passwordHint 选填(0015), 空串表示不设置.
+func (s *AuthService) Register(username, password, passwordHint string) (string, *model.User, error) {
 	if _, reserved := adminUsernames()[username]; reserved {
 		return "", nil, ErrUsernameReserved
 	}
@@ -92,6 +93,7 @@ func (s *AuthService) Register(username, password string) (string, *model.User, 
 		UUID:         uuid.NewString(),
 		Username:     username,
 		PasswordHash: string(hash),
+		PasswordHint: passwordHint,
 		IsActive:     true,
 	}
 	if err := s.db.Create(u).Error; err != nil {
@@ -118,6 +120,16 @@ func (s *AuthService) GetByID(id uint64) (*model.User, error) {
 	return &u, nil
 }
 
+// PasswordHint 忘记密码时按用户名查提示(0015). 供未登录态调用, 因此
+// 用户不存在/被软删时也返回空串, 与"未设置提示"不可区分, 不泄露账号存在性.
+func (s *AuthService) PasswordHint(username string) string {
+	var u model.User
+	if err := s.db.Select("password_hint").Where("username = ?", username).First(&u).Error; err != nil {
+		return ""
+	}
+	return u.PasswordHint
+}
+
 // ChangePassword 登录用户自助改密. 强制 actorID == targetID, 由 handler 自行保证.
 func (s *AuthService) ChangePassword(userID uint64, oldPassword, newPassword string) error {
 	var u model.User
@@ -135,4 +147,20 @@ func (s *AuthService) ChangePassword(userID uint64, oldPassword, newPassword str
 		return err
 	}
 	return s.db.Model(&u).Update("password_hash", string(hash)).Error
+}
+
+// ChangePasswordHint 登录用户改自己的密码提示(0015). 必须先验证当前密码,
+// 防止他人借用已登录会话篡改提示(提示是公开可查的, 改提示等于改找回入口).
+func (s *AuthService) ChangePasswordHint(userID uint64, password, newHint string) error {
+	var u model.User
+	if err := s.db.First(&u, userID).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return ErrUserNotFound
+		}
+		return err
+	}
+	if err := bcrypt.CompareHashAndPassword([]byte(u.PasswordHash), []byte(password)); err != nil {
+		return ErrInvalidOldPassword
+	}
+	return s.db.Model(&u).Update("password_hint", newHint).Error
 }

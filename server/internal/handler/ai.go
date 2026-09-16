@@ -60,7 +60,7 @@ func (h *AIHandler) RenameConversation(c *gin.Context) {
 	uid := userIDOf(c)
 	convID, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
-		response.BadRequest(c, "invalid id")
+		response.BadRequest(c, "无效的 ID")
 		return
 	}
 	var req renameConvReq
@@ -70,7 +70,7 @@ func (h *AIHandler) RenameConversation(c *gin.Context) {
 	}
 	if err := h.svc.RenameConversation(uid, convID, req.Title); err != nil {
 		if errors.Is(err, service.ErrConversationNotFound) {
-			response.Fail(c, 404, 4004, "conversation not found")
+			response.Fail(c, 404, 4004, "会话不存在")
 			return
 		}
 		response.ServerError(c, err.Error())
@@ -83,12 +83,12 @@ func (h *AIHandler) DeleteConversation(c *gin.Context) {
 	uid := userIDOf(c)
 	convID, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
-		response.BadRequest(c, "invalid id")
+		response.BadRequest(c, "无效的 ID")
 		return
 	}
 	if err := h.svc.DeleteConversation(uid, convID); err != nil {
 		if errors.Is(err, service.ErrConversationNotFound) {
-			response.Fail(c, 404, 4004, "conversation not found")
+			response.Fail(c, 404, 4004, "会话不存在")
 			return
 		}
 		response.ServerError(c, err.Error())
@@ -101,14 +101,14 @@ func (h *AIHandler) ListMessages(c *gin.Context) {
 	uid := userIDOf(c)
 	convID, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
-		response.BadRequest(c, "invalid id")
+		response.BadRequest(c, "无效的 ID")
 		return
 	}
 	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "50"))
 	msgs, err := h.svc.GetRecentMessages(uid, convID, limit)
 	if err != nil {
 		if errors.Is(err, service.ErrConversationNotFound) {
-			response.Fail(c, 404, 4004, "conversation not found")
+			response.Fail(c, 404, 4004, "会话不存在")
 			return
 		}
 		response.ServerError(c, err.Error())
@@ -131,23 +131,23 @@ type sendMessageReq struct {
 //  5. 流式结束:Finalize(标题/updated_at)
 func (h *AIHandler) SendMessage(c *gin.Context) {
 	if !h.aiConfigured() {
-		response.ServerError(c, "AI not configured (set ai.api_key / ai.base_url / ai.model in config.yaml)")
+		response.ServerError(c, "AI 服务未配置(需在 config.yaml 设置 ai.api_key / ai.base_url / ai.model)")
 		return
 	}
 	uid := userIDOf(c)
 	convID, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
-		response.BadRequest(c, "invalid id")
+		response.BadRequest(c, "无效的 ID")
 		return
 	}
 	var req sendMessageReq
 	if err := c.ShouldBindJSON(&req); err != nil {
-		response.BadRequest(c, "content required")
+		response.BadRequest(c, "请输入内容")
 		return
 	}
 	if _, err := h.svc.GetConversation(uid, convID); err != nil {
 		if errors.Is(err, service.ErrConversationNotFound) {
-			response.Fail(c, 404, 4004, "conversation not found")
+			response.Fail(c, 404, 4004, "会话不存在")
 			return
 		}
 		response.ServerError(c, err.Error())
@@ -223,13 +223,13 @@ type chatReq struct {
 // Chat 是无状态版,继续保留供前端尚未升级时使用。
 func (h *AIHandler) Chat(c *gin.Context) {
 	if !h.aiConfigured() {
-		response.ServerError(c, "AI not configured (set ai.api_key / ai.base_url / ai.model in config.yaml)")
+		response.ServerError(c, "AI 服务未配置(需在 config.yaml 设置 ai.api_key / ai.base_url / ai.model)")
 		return
 	}
 
 	var req chatReq
 	if err := c.ShouldBindJSON(&req); err != nil {
-		response.BadRequest(c, "messages required: [{role, content}]")
+		response.BadRequest(c, "messages 格式应为 [{role, content}]")
 		return
 	}
 
@@ -257,7 +257,7 @@ func (h *AIHandler) Chat(c *gin.Context) {
 		return
 	}
 	if len(resp.Choices) == 0 {
-		response.ServerError(c, "no choices returned")
+		response.ServerError(c, "AI 服务未返回内容")
 		return
 	}
 	response.OK(c, gin.H{

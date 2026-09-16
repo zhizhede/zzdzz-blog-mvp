@@ -5,6 +5,7 @@ export interface AuthUser {
   uuid: string
   username: string
   is_admin: boolean
+  password_hint?: string
 }
 
 export interface LoginResult {
@@ -16,14 +17,29 @@ export interface LoginResult {
 export const authApi = {
   login: (username: string, password: string) =>
     http.post<any, ApiResponse<LoginResult>>('/auth/login', { username, password }),
-  // 开放注册: 用户名可重名, 注册成功即返回 token(注册即登录)
-  register: (username: string, password: string) =>
-    http.post<any, ApiResponse<LoginResult>>('/auth/register', { username, password }),
+  // 开放注册: 用户名可重名, 注册成功即返回 token(注册即登录); password_hint 选填
+  register: (username: string, password: string, passwordHint?: string) =>
+    http.post<any, ApiResponse<LoginResult>>('/auth/register', {
+      username,
+      password,
+      password_hint: passwordHint || '',
+    }),
+  // 忘记密码: 按用户名查注册时留的密码提示(公开接口, 未设置/用户不存在均返回空串)
+  passwordHint: (username: string) =>
+    http.post<any, ApiResponse<{ username: string; password_hint: string }>>('/auth/password-hint', {
+      username,
+    }),
   me: () => http.get<any, ApiResponse<AuthUser>>('/auth/me'),
   changeOwnPassword: (oldPassword: string, newPassword: string) =>
     http.put<any, ApiResponse<null>>('/auth/password', {
       old_password: oldPassword,
       new_password: newPassword,
+    }),
+  // 改密码提示: 需携带当前密码验证(提示是公开可查的, 改提示等于改找回入口)
+  changeOwnPasswordHint: (password: string, passwordHint: string) =>
+    http.put<any, ApiResponse<null>>('/auth/password-hint', {
+      password,
+      password_hint: passwordHint,
     }),
 }
 

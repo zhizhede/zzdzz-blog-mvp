@@ -56,7 +56,7 @@ type composeReq struct {
 // 事件序列: [sources] [meta] delta... [DONE], 与 AI 会话同一套格式.
 func (h *WritingHandler) Compose(c *gin.Context) {
 	if !h.aiConfigured() {
-		response.ServerError(c, "AI not configured (set ai.api_key / ai.base_url / ai.model in config.yaml)")
+		response.ServerError(c, "AI 服务未配置(需在 config.yaml 设置 ai.api_key / ai.base_url / ai.model)")
 		return
 	}
 	var req composeReq
@@ -68,7 +68,7 @@ func (h *WritingHandler) Compose(c *gin.Context) {
 	switch action := service.ComposeAction(req.Action); action {
 	case service.ComposeOutline, service.ComposeDraft:
 		if utf8.RuneCountInString(req.Material) == 0 {
-			response.BadRequest(c, "material required")
+			response.BadRequest(c, "请提供素材")
 			return
 		}
 		if utf8.RuneCountInString(req.Material) > service.MaxMaterialLen {
@@ -77,7 +77,7 @@ func (h *WritingHandler) Compose(c *gin.Context) {
 		}
 	case service.ComposeRefine:
 		if utf8.RuneCountInString(req.Draft) == 0 {
-			response.BadRequest(c, "draft required")
+			response.BadRequest(c, "请提供草稿")
 			return
 		}
 		if utf8.RuneCountInString(req.Draft) > service.MaxDraftLen {
@@ -85,16 +85,16 @@ func (h *WritingHandler) Compose(c *gin.Context) {
 			return
 		}
 		if strings.TrimSpace(req.Instruction) == "" {
-			response.BadRequest(c, "instruction required for refine")
+			response.BadRequest(c, "润色需要提供指令")
 			return
 		}
 	}
 	if n := utf8.RuneCountInString(req.Outline); n > service.MaxDraftLen {
-		response.BadRequest(c, "outline too long")
+		response.BadRequest(c, "提纲过长")
 		return
 	}
 	if n := utf8.RuneCountInString(req.Instruction); n > 2000 {
-		response.BadRequest(c, "instruction too long (max 2000 字)")
+		response.BadRequest(c, "指令过长(最多 2000 字)")
 		return
 	}
 
@@ -251,7 +251,7 @@ func (h *WritingHandler) DeriveStyleProfile(c *gin.Context) {
 func (h *WritingHandler) CreateVersion(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil || id == 0 {
-		response.BadRequest(c, "invalid id")
+		response.BadRequest(c, "无效的 ID")
 		return
 	}
 	var req struct {
@@ -274,7 +274,7 @@ func (h *WritingHandler) CreateVersion(c *gin.Context) {
 func (h *WritingHandler) ListVersions(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil || id == 0 {
-		response.BadRequest(c, "invalid id")
+		response.BadRequest(c, "无效的 ID")
 		return
 	}
 	vs, err := h.svc.ListVersions(id, actorOf(c))
@@ -317,12 +317,12 @@ func (h *WritingHandler) RestoreVersion(c *gin.Context) {
 func versionParams(c *gin.Context) (id, vid uint64, ok bool) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil || id == 0 {
-		response.BadRequest(c, "invalid id")
+		response.BadRequest(c, "无效的 ID")
 		return 0, 0, false
 	}
 	vid, err = strconv.ParseUint(c.Param("vid"), 10, 64)
 	if err != nil || vid == 0 {
-		response.BadRequest(c, "invalid version id")
+		response.BadRequest(c, "无效的版本 ID")
 		return 0, 0, false
 	}
 	return id, vid, true

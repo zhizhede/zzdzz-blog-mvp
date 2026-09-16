@@ -45,6 +45,8 @@ const routes = [
       { path: 'notes/new', component: () => import('../views/space/MyNoteEditor.vue') },
       { path: 'notes/:id/edit', component: () => import('../views/space/MyNoteEditor.vue') },
       { path: 'profile', component: () => import('../views/space/Profile.vue') },
+      // AI 对话开放给所有登录用户: 与 /admin/ai 共用同一组件(后端接口本就 RequireAuth)
+      { path: 'ai', component: () => import('../views/admin/AICenter.vue') },
     ],
   },
   {

@@ -312,28 +312,28 @@ const statusText = computed(() => {
 <style scoped>
 .page { display: flex; flex-direction: column; gap: 24px; padding-bottom: 64px; }
 .page-head { display: flex; flex-direction: column; gap: 10px; }
-.title { font-size: 32px; line-height: 1.1; margin: 0; letter-spacing: -0.6px; }
-.status { color: var(--ink-mute); font-size: 12px; margin: 0; }
+.title { font-size: 40px; line-height: 1.1; margin: 0; letter-spacing: -0.6px; }
+.status { color: var(--ink-mute); font-size: 15px; margin: 0; }
 .status.error { color: var(--danger); }
 .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
 .col { display: flex; flex-direction: column; gap: 16px; }
 .field { display: flex; flex-direction: column; gap: 6px; }
-.label { color: var(--ink-mute); font-size: 11px; text-transform: uppercase; letter-spacing: 0.16em; }
+.label { color: var(--ink-mute); font-size: 13.75px; text-transform: uppercase; letter-spacing: 0.16em; }
 .input {
   background: transparent;
   border: 0;
   border-bottom: 1px solid var(--rule-soft);
   padding: 8px 0;
   font-family: var(--font-body);
-  font-size: 14px;
+  font-size: 17.5px;
   color: var(--ink);
   outline: none;
   width: 100%;
   box-sizing: border-box;
 }
 .input:focus { border-bottom-color: var(--ink); }
-.title-input { font-size: 22px; font-family: var(--font-display); font-weight: 500; }
-.mono-area { font-family: var(--font-mono); font-size: 13px; line-height: 1.7; }
+.title-input { font-size: 27.5px; font-family: var(--font-display); font-weight: 500; }
+.mono-area { font-family: var(--font-mono); font-size: 16.25px; line-height: 1.7; }
 .row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
 .vis-row { display: flex; gap: 6px; }
 .vis-btn {
@@ -342,7 +342,7 @@ const statusText = computed(() => {
   padding: 6px 12px;
   border-radius: var(--radius);
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: 13.75px;
   letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--ink-soft);
@@ -357,7 +357,7 @@ const statusText = computed(() => {
   padding: 4px 10px;
   border-radius: 999px;
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: 13.75px;
   color: var(--ink-soft);
   cursor: pointer;
 }
@@ -379,7 +379,7 @@ const statusText = computed(() => {
   padding: 10px 20px;
   border-radius: var(--radius);
   font-family: var(--font-mono);
-  font-size: 12px;
+  font-size: 15px;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   cursor: pointer;
@@ -396,9 +396,9 @@ const statusText = computed(() => {
 }
 .preview-head { padding: 12px 20px; border-bottom: 1px solid var(--rule-soft); color: var(--ink-mute); background: var(--bg-sunken); }
 .preview-body { padding: 24px; }
-.preview-title { font-size: 24px; line-height: 1.15; margin: 0 0 12px; }
+.preview-title { font-size: 30px; line-height: 1.15; margin: 0 0 12px; }
 .preview-summary { border-left: 2px solid var(--accent); padding-left: 12px; color: var(--ink-soft); font-style: italic; margin: 0 0 16px; }
-.preview-md { white-space: pre-wrap; font-family: var(--font-mono); font-size: 13px; line-height: 1.7; color: var(--ink-soft); margin: 0; }
+.preview-md { white-space: pre-wrap; font-family: var(--font-mono); font-size: 16.25px; line-height: 1.7; color: var(--ink-soft); margin: 0; }
 @media (max-width: 960px) {
   .grid { grid-template-columns: 1fr; }
   .col-preview { position: static; max-height: none; }

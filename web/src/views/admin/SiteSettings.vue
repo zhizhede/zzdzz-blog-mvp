@@ -97,7 +97,7 @@ onMounted(fetchMeta)
 <style scoped>
 .page { display: flex; flex-direction: column; gap: 24px; padding-bottom: 64px; }
 .page-head { display: flex; flex-direction: column; gap: 10px; }
-.title { font-size: 32px; line-height: 1.1; margin: 0; letter-spacing: -0.6px; }
+.title { font-size: 40px; line-height: 1.1; margin: 0; letter-spacing: -0.6px; }
 
 .card {
   background: var(--bg-elev);
@@ -114,8 +114,8 @@ onMounted(fetchMeta)
   background: var(--bg-sunken);
   border-radius: var(--radius) var(--radius) 0 0;
 }
-.label { color: var(--ink-mute); font-size: 11px; text-transform: uppercase; letter-spacing: 0.16em; }
-.state { font-size: 11px; color: var(--ink-mute); }
+.label { color: var(--ink-mute); font-size: 13.75px; text-transform: uppercase; letter-spacing: 0.16em; }
+.state { font-size: 13.75px; color: var(--ink-mute); }
 .state-custom { color: var(--accent); }
 
 .card-body { display: flex; gap: 24px; padding: 24px 20px; align-items: flex-start; }
@@ -136,7 +136,7 @@ onMounted(fetchMeta)
 .preview-fallback { position: absolute; color: var(--ink-faint); }
 
 .ops { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
-.desc { margin: 0; color: var(--ink-soft); font-size: 13px; line-height: 1.8; }
+.desc { margin: 0; color: var(--ink-soft); font-size: 16.25px; line-height: 1.8; }
 .btn-row { display: flex; gap: 12px; flex-wrap: wrap; }
 .upload-btn {
   display: inline-flex;
@@ -147,7 +147,7 @@ onMounted(fetchMeta)
   padding: 9px 18px;
   border-radius: var(--radius);
   font-family: var(--font-mono);
-  font-size: 12px;
+  font-size: 15px;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   cursor: pointer;
@@ -166,10 +166,10 @@ onMounted(fetchMeta)
   padding: 9px 16px;
   border-radius: var(--radius);
   font-family: var(--font-mono);
-  font-size: 12px;
+  font-size: 15px;
   cursor: pointer;
   transition: all var(--transition);
 }
 .reset-btn:hover { color: var(--danger); border-color: var(--danger); }
-.updated { margin: 0; color: var(--ink-mute); font-size: 12px; }
+.updated { margin: 0; color: var(--ink-mute); font-size: 15px; }
 </style>

@@ -52,6 +52,10 @@
   --transition: 200ms ease;
 
   /* override Element Plus */
+  /* 全站字号放大 25%: EP 默认 14/13/12 → 17.5/16.25/15, 覆盖未被自定义样式接管的组件(消息弹窗/下拉等) */
+  --el-font-size-base: 17.5px;
+  --el-font-size-small: 16.25px;
+  --el-font-size-extra-small: 15px;
   --el-color-primary: var(--accent);
   --el-color-primary-light-3: #d3936f;
   --el-color-primary-light-5: #e1b294;

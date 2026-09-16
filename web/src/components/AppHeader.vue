@@ -113,18 +113,18 @@ function handleCommand(cmd: string) {
 }
 .brand:hover { color: var(--accent); }
 .brand-mark {
-  font-size: 22px;
+  font-size: 27.5px;
   font-weight: 700;
   color: var(--accent);
 }
 .brand-word {
-  font-size: 20px;
+  font-size: 25px;
   font-weight: 600;
   letter-spacing: -0.4px;
 }
 .brand-tld {
   font-family: var(--font-mono);
-  font-size: 12px;
+  font-size: 15px;
   text-transform: uppercase;
   letter-spacing: 0.16em;
   color: var(--ink-mute);
@@ -137,7 +137,7 @@ function handleCommand(cmd: string) {
 }
 .nav-item {
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: 13.75px;
   text-transform: uppercase;
   letter-spacing: 0.16em;
   color: var(--ink-mute);
@@ -179,7 +179,7 @@ function handleCommand(cmd: string) {
   padding: 6px 10px;
   border-radius: var(--radius);
   font-family: var(--font-mono);
-  font-size: 12px;
+  font-size: 15px;
   letter-spacing: 0.06em;
   color: var(--ink);
   border: 1px solid var(--rule-soft);
@@ -190,7 +190,7 @@ function handleCommand(cmd: string) {
 .login-link {
   border: 0;
   font-family: var(--font-mono);
-  font-size: 12px;
+  font-size: 15px;
   letter-spacing: 0.16em;
   text-transform: uppercase;
   color: var(--ink);

@@ -1,35 +1,49 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import { authApi } from '../api'
 
-defineProps<{ modelValue: boolean }>()
+const props = defineProps<{ modelValue: boolean }>()
 const emit = defineEmits<{ (e: 'update:modelValue', v: boolean): void }>()
 
-const form = ref({ old_password: '', new_password: '', confirm: '' })
+const password = ref('')
+const hint = ref('')
+const currentHint = ref('')
 const saving = ref(false)
 
 const close = () => emit('update:modelValue', false)
 
+// 每次打开时拉当前提示, 方便对照修改
+watch(
+  () => props.modelValue,
+  async (open) => {
+    if (!open) return
+    password.value = ''
+    hint.value = ''
+    currentHint.value = ''
+    try {
+      const res = await authApi.me()
+      currentHint.value = res.data.password_hint || ''
+    } catch {
+      // 拦截器已提示
+    }
+  },
+  { immediate: true }
+)
+
 const handleSubmit = async () => {
-  const { old_password, new_password, confirm } = form.value
-  if (!old_password) {
-    ElMessage.warning('请输入旧密码')
+  if (!password.value) {
+    ElMessage.warning('请输入当前密码')
     return
   }
-  if (new_password.length < 6) {
-    ElMessage.warning('新密码至少 6 位')
-    return
-  }
-  if (new_password !== confirm) {
-    ElMessage.warning('两次新密码不一致')
+  if (hint.value.length > 255) {
+    ElMessage.warning('提示最多 255 字')
     return
   }
   saving.value = true
   try {
-    await authApi.changeOwnPassword(old_password, new_password)
-    ElMessage.success('密码已更新')
-    form.value = { old_password: '', new_password: '', confirm: '' }
+    await authApi.changeOwnPasswordHint(password.value, hint.value.trim())
+    ElMessage.success('密码提示已更新')
     close()
   } finally {
     saving.value = false
@@ -40,19 +54,20 @@ const handleSubmit = async () => {
 <template>
   <div v-if="modelValue" class="overlay" @click.self="close">
     <div class="dialog">
-      <p class="mono d-tag">RESET PASSWORD</p>
-      <h2 class="display d-title">重置密码</h2>
+      <p class="mono d-tag">CHANGE HINT</p>
+      <h2 class="display d-title">更改密码提示</h2>
       <label class="field">
-        <span class="mono label">OLD PASSWORD</span>
-        <input v-model="form.old_password" type="password" class="input" />
+        <span class="mono label">CURRENT PASSWORD</span>
+        <input v-model="password" type="password" class="input" />
       </label>
       <label class="field">
-        <span class="mono label">NEW PASSWORD · 至少 6 位</span>
-        <input v-model="form.new_password" type="password" class="input" />
-      </label>
-      <label class="field">
-        <span class="mono label">CONFIRM</span>
-        <input v-model="form.confirm" type="password" class="input" />
+        <span class="mono label">NEW HINT · 选填, 忘记密码时可公开查看</span>
+        <input
+          v-model="hint"
+          class="input"
+          :placeholder="currentHint ? `当前提示: ${currentHint}` : '未设置提示'"
+          maxlength="255"
+        />
       </label>
       <div class="d-row">
         <button class="text-btn" @click="close">取消</button>

@@ -4,10 +4,12 @@ import { ElMessage } from 'element-plus'
 import { useUserStore } from '../../stores/user'
 import IssueTag from '../../components/IssueTag.vue'
 import ChangePasswordDialog from '../../components/ChangePasswordDialog.vue'
+import ChangeHintDialog from '../../components/ChangeHintDialog.vue'
 
 const userStore = useUserStore()
 
 const pwdDialog = ref(false)
+const hintDialog = ref(false)
 
 // 站点是 HTTP(IP 直访)时 navigator.clipboard 不存在, 降级 execCommand
 const copyText = async (text: string) => {
@@ -76,6 +78,9 @@ onMounted(() => {
           <button class="primary-btn" @click="pwdDialog = true">
             <span class="mono">↻</span> 重置密码
           </button>
+          <button class="primary-btn" @click="hintDialog = true">
+            <span class="mono">✎</span> 更改提示
+          </button>
         </div>
       </section>
 
@@ -85,18 +90,20 @@ onMounted(() => {
           <li><span class="mono dot">●</span> 密码长度至少 6 位</li>
           <li><span class="mono dot">●</span> 重置后会自动退出旧会话</li>
           <li><span class="mono dot">●</span> 自己账号需输入当前密码</li>
+          <li><span class="mono dot">●</span> 密码提示忘记密码时可按用户名公开查看, 请勿写入密码本身</li>
         </ul>
       </section>
     </div>
 
     <ChangePasswordDialog v-model="pwdDialog" />
+    <ChangeHintDialog v-model="hintDialog" />
   </div>
 </template>
 
 <style scoped>
 .page { display: flex; flex-direction: column; gap: 24px; padding-bottom: 64px; }
 .page-head { display: flex; flex-direction: column; gap: 12px; }
-.title { font-size: 36px; line-height: 1; margin: 0; letter-spacing: -0.8px; }
+.title { font-size: 45px; line-height: 1; margin: 0; letter-spacing: -0.8px; }
 
 .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
 .card {
@@ -115,15 +122,15 @@ onMounted(() => {
   border-radius: 50%;
   display: flex; align-items: center; justify-content: center;
   font-family: var(--font-display);
-  font-size: 24px;
+  font-size: 30px;
   font-weight: 600;
   border: 1px solid var(--rule-soft);
 }
 .avatar.admin { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
 .avatar.reader { background: var(--bg-sunken); color: var(--ink); }
 .who { display: flex; flex-direction: column; gap: 4px; }
-.name { font-size: 24px; margin: 0; }
-.uid { font-size: 12px; color: var(--ink-mute); }
+.name { font-size: 30px; margin: 0; }
+.uid { font-size: 15px; color: var(--ink-mute); }
 .uuid-row {
   display: flex;
   align-items: baseline;
@@ -139,24 +146,24 @@ onMounted(() => {
 }
 .uuid-row:hover .uuid-copy { color: var(--accent); }
 .uuid-label {
-  font-size: 10px;
+  font-size: 12.5px;
   color: var(--ink-mute);
   letter-spacing: 0.16em;
 }
 .uuid-value {
-  font-size: 12px;
+  font-size: 15px;
   color: var(--ink-soft);
   word-break: break-all;
 }
 .uuid-copy {
-  font-size: 11px;
+  font-size: 13.75px;
   color: var(--ink-mute);
   margin-left: auto;
   transition: color var(--transition);
 }
 .actions { display: flex; gap: 12px; padding-top: 8px; border-top: 1px solid var(--rule-soft); }
 .tips { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
-.tips li { display: flex; gap: 10px; align-items: baseline; color: var(--ink-soft); font-size: 14px; }
+.tips li { display: flex; gap: 10px; align-items: baseline; color: var(--ink-soft); font-size: 17.5px; }
 .tips .dot { color: var(--accent); }
 
 .primary-btn {
@@ -166,7 +173,7 @@ onMounted(() => {
   padding: 10px 18px;
   border-radius: var(--radius);
   font-family: var(--font-mono);
-  font-size: 12px;
+  font-size: 15px;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   cursor: pointer;

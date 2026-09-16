@@ -29,7 +29,7 @@ const maxIconUpload = 5 << 20 // 5MB
 func (h *SiteHandler) Upload(c *gin.Context) {
 	fh, err := c.FormFile("file")
 	if err != nil {
-		response.BadRequest(c, "missing file field")
+		response.BadRequest(c, "缺少上传文件")
 		return
 	}
 	if fh.Size > maxIconUpload {
@@ -42,7 +42,7 @@ func (h *SiteHandler) Upload(c *gin.Context) {
 	}
 	f, err := fh.Open()
 	if err != nil {
-		response.BadRequest(c, "read upload failed")
+		response.BadRequest(c, "读取上传文件失败")
 		return
 	}
 	defer f.Close()

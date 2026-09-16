@@ -145,6 +145,8 @@ func New(db *gorm.DB, cfg *config.Config) (*gin.Engine, error) {
 			authGroup.POST("/login", auth.Login)
 			// 开放注册(0013): 游客输用户名(可重名)+ 密码即可注册, 成功即返回 token
 			authGroup.POST("/register", auth.Register)
+			// 密码提示查询(0015): 公开接口, 忘记密码时按用户名查看注册时留的提示
+			authGroup.POST("/password-hint", auth.PasswordHint)
 
 			protected := authGroup.Group("")
 			protected.Use(handler.RequireAuth(&cfg.JWT))
@@ -152,6 +154,8 @@ func New(db *gorm.DB, cfg *config.Config) (*gin.Engine, error) {
 				protected.GET("/me", auth.Me)
 				// 自助改密: 登录用户改自己的密码(强制 actorID == targetID)
 				protected.PUT("/password", auth.ChangeOwnPassword)
+				// 改密码提示(0015): 需验证当前密码
+				protected.PUT("/password-hint", auth.ChangeOwnPasswordHint)
 			}
 		}
 

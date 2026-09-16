@@ -97,7 +97,7 @@ const dateStr = computed(() => {
   background: transparent;
   border: 0;
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: 13.75px;
   letter-spacing: 0.16em;
   text-transform: uppercase;
   color: var(--ink-mute);
@@ -113,15 +113,15 @@ const dateStr = computed(() => {
   text-align: center;
   color: var(--ink-mute);
 }
-.state-title { margin: 0 0 16px; font-size: 16px; }
+.state-title { margin: 0 0 16px; font-size: 20px; }
 .state-link {
   color: var(--accent);
   font-family: var(--font-mono);
-  font-size: 13px;
+  font-size: 16.25px;
   text-decoration: none;
 }
 .title {
-  font-size: 48px;
+  font-size: 60px;
   line-height: 1.05;
   margin: 16px 0 8px;
   letter-spacing: -1.2px;
@@ -133,14 +133,14 @@ const dateStr = computed(() => {
   align-items: center;
   gap: 6px 10px;
   color: var(--ink-mute);
-  font-size: 13px;
+  font-size: 16.25px;
   margin-bottom: 16px;
 }
 .meta .cat {
   font-family: var(--font-mono);
   text-transform: uppercase;
   letter-spacing: 0.1em;
-  font-size: 11px;
+  font-size: 13.75px;
   color: var(--accent);
 }
 .meta .mono { font-family: var(--font-mono); }
@@ -152,7 +152,7 @@ const dateStr = computed(() => {
 }
 .tag-chip {
   font-family: var(--font-mono);
-  font-size: 12px;
+  font-size: 15px;
   color: var(--ink-mute);
   border: 1px solid var(--rule-soft);
   padding: 2px 8px;
@@ -179,12 +179,12 @@ const dateStr = computed(() => {
 .end-tags-label {
   margin: 0;
   color: var(--ink-mute);
-  font-size: 11px;
+  font-size: 13.75px;
   text-transform: uppercase;
   letter-spacing: 0.16em;
 }
 .end-tags-row { display: flex; flex-wrap: wrap; gap: 8px; }
 @media (max-width: 760px) {
-  .title { font-size: 32px; }
+  .title { font-size: 40px; }
 }
 </style>

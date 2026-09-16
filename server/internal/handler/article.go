@@ -93,7 +93,7 @@ func (h *ArticleHandler) List(c *gin.Context) {
 func (h *ArticleHandler) Get(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
-		response.BadRequest(c, "invalid id")
+		response.BadRequest(c, "无效的 ID")
 		return
 	}
 	isAdmin := mustBool(c, "is_admin")
@@ -113,7 +113,7 @@ func (h *ArticleHandler) Get(c *gin.Context) {
 	}
 	if serr != nil {
 		if errors.Is(serr, service.ErrArticleNotFound) {
-			response.Fail(c, 404, 4004, "article not found")
+			response.Fail(c, 404, 4004, "文章不存在")
 			return
 		}
 		response.ServerError(c, serr.Error())
@@ -156,7 +156,7 @@ func (h *ArticleHandler) Create(c *gin.Context) {
 func (h *ArticleHandler) Update(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
-		response.BadRequest(c, "invalid id")
+		response.BadRequest(c, "无效的 ID")
 		return
 	}
 	var req articleReq
@@ -177,11 +177,11 @@ func (h *ArticleHandler) Update(c *gin.Context) {
 	if err != nil {
 		switch {
 		case errors.Is(err, service.ErrArticleNotFound):
-			response.Fail(c, 404, 4004, "article not found")
+			response.Fail(c, 404, 4004, "文章不存在")
 		case errors.Is(err, service.ErrCategoryNotFoundArt):
 			response.Fail(c, 404, 4004, "category not found")
 		case errors.Is(err, service.ErrArticleNotOwned):
-			response.Fail(c, 403, 4003, "not article owner")
+			response.Fail(c, 403, 4003, "不是这篇文章的作者, 无权操作")
 		default:
 			response.ServerError(c, err.Error())
 		}
@@ -194,7 +194,7 @@ func (h *ArticleHandler) Update(c *gin.Context) {
 func (h *ArticleHandler) Autosave(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
-		response.BadRequest(c, "invalid id")
+		response.BadRequest(c, "无效的 ID")
 		return
 	}
 	var req autosaveReq
@@ -211,9 +211,9 @@ func (h *ArticleHandler) Autosave(c *gin.Context) {
 	if err != nil {
 		switch {
 		case errors.Is(err, service.ErrArticleNotFound):
-			response.Fail(c, 404, 4004, "article not found")
+			response.Fail(c, 404, 4004, "文章不存在")
 		case errors.Is(err, service.ErrArticleNotOwned):
-			response.Fail(c, 403, 4003, "not article owner")
+			response.Fail(c, 403, 4003, "不是这篇文章的作者, 无权操作")
 		case errors.Is(err, service.ErrArticleNotDraft):
 			response.Fail(c, 400, 4002, "only drafts can be autosaved")
 		default:
@@ -232,7 +232,7 @@ func (h *ArticleHandler) Autosave(c *gin.Context) {
 func (h *ArticleHandler) SetVisibility(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
-		response.BadRequest(c, "invalid id")
+		response.BadRequest(c, "无效的 ID")
 		return
 	}
 	var req struct {
@@ -246,9 +246,9 @@ func (h *ArticleHandler) SetVisibility(c *gin.Context) {
 	if err != nil {
 		switch {
 		case errors.Is(err, service.ErrArticleNotFound):
-			response.Fail(c, 404, 4004, "article not found")
+			response.Fail(c, 404, 4004, "文章不存在")
 		case errors.Is(err, service.ErrArticleNotOwned):
-			response.Fail(c, 403, 4003, "not article owner")
+			response.Fail(c, 403, 4003, "不是这篇文章的作者, 无权操作")
 		default:
 			response.ServerError(c, err.Error())
 		}
@@ -283,7 +283,7 @@ func (h *ArticleHandler) ListMyDrafts(c *gin.Context) {
 func (h *ArticleHandler) GetWithTags(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
-		response.BadRequest(c, "invalid id")
+		response.BadRequest(c, "无效的 ID")
 		return
 	}
 	isAdmin := mustBool(c, "is_admin")
@@ -320,7 +320,7 @@ func (h *ArticleHandler) GetWithTags(c *gin.Context) {
 	}
 	if serr != nil {
 		if errors.Is(serr, service.ErrArticleNotFound) {
-			response.Fail(c, 404, 4004, "article not found")
+			response.Fail(c, 404, 4004, "文章不存在")
 			return
 		}
 		response.ServerError(c, serr.Error())
@@ -332,15 +332,15 @@ func (h *ArticleHandler) GetWithTags(c *gin.Context) {
 func (h *ArticleHandler) Delete(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
-		response.BadRequest(c, "invalid id")
+		response.BadRequest(c, "无效的 ID")
 		return
 	}
 	if err := h.svc.Delete(id, actorOf(c)); err != nil {
 		switch {
 		case errors.Is(err, service.ErrArticleNotFound):
-			response.Fail(c, 404, 4004, "article not found")
+			response.Fail(c, 404, 4004, "文章不存在")
 		case errors.Is(err, service.ErrArticleNotOwned):
-			response.Fail(c, 403, 4003, "not article owner")
+			response.Fail(c, 403, 4003, "不是这篇文章的作者, 无权操作")
 		default:
 			response.ServerError(c, err.Error())
 		}

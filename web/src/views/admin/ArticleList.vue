@@ -152,7 +152,7 @@ onMounted(() => {
 .page { display: flex; flex-direction: column; gap: 24px; padding-bottom: 64px; }
 .page-head { display: flex; flex-direction: column; gap: 12px; }
 .head-row { display: flex; justify-content: space-between; align-items: baseline; }
-.title { font-size: 36px; line-height: 1; margin: 0; letter-spacing: -0.8px; }
+.title { font-size: 45px; line-height: 1; margin: 0; letter-spacing: -0.8px; }
 .primary-btn {
   background: var(--ink);
   color: var(--ink-on-inverse);
@@ -160,7 +160,7 @@ onMounted(() => {
   padding: 10px 18px;
   border-radius: var(--radius);
   font-family: var(--font-mono);
-  font-size: 12px;
+  font-size: 15px;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   cursor: pointer;
@@ -179,7 +179,7 @@ onMounted(() => {
   padding: 4px 12px;
   border-radius: var(--radius);
   font-family: var(--font-body);
-  font-size: 13px;
+  font-size: 16.25px;
   color: var(--ink-soft);
   cursor: pointer;
 }
@@ -194,7 +194,7 @@ onMounted(() => {
   border-bottom: 1px solid var(--rule-soft);
   padding: 6px 0;
   font-family: var(--font-body);
-  font-size: 14px;
+  font-size: 17.5px;
   color: var(--ink);
   outline: none;
 }
@@ -208,18 +208,18 @@ onMounted(() => {
   padding: 14px 12px;
   border-bottom: 1px solid var(--rule-soft);
   align-items: center;
-  font-size: 14px;
+  font-size: 17.5px;
   color: var(--ink);
 }
-.row-head { background: var(--bg-sunken); border-bottom: 1px solid var(--rule); font-family: var(--font-mono); font-size: 11px; text-transform: uppercase; letter-spacing: 0.12em; color: var(--ink-mute); }
+.row-head { background: var(--bg-sunken); border-bottom: 1px solid var(--rule); font-family: var(--font-mono); font-size: 13.75px; text-transform: uppercase; letter-spacing: 0.12em; color: var(--ink-mute); }
 .cell { min-width: 0; }
 .c-title { font-family: var(--font-display); font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.c-date { color: var(--ink-mute); font-size: 12px; }
+.c-date { color: var(--ink-mute); font-size: 15px; }
 .row:hover .c-title { color: var(--accent); }
 
 .vis-pill {
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: 13.75px;
   text-transform: uppercase;
   letter-spacing: 0.08em;
   padding: 3px 8px;
@@ -239,7 +239,7 @@ onMounted(() => {
   border-bottom: 1px solid var(--rule-soft);
   padding: 4px 0;
   font-family: var(--font-body);
-  font-size: 13px;
+  font-size: 16.25px;
   color: var(--ink);
   cursor: pointer;
 }
@@ -251,5 +251,5 @@ onMounted(() => {
 
 .loading, .empty { padding: 40px; text-align: center; color: var(--ink-mute); }
 .pager { display: flex; justify-content: space-between; align-items: center; padding-top: 16px; }
-.pager-info { color: var(--ink-mute); font-size: 12px; }
+.pager-info { color: var(--ink-mute); font-size: 15px; }
 </style>
