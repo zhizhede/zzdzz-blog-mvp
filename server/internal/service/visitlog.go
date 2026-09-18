@@ -233,6 +233,25 @@ func (s *VisitLogService) StatsForAI() (string, error) {
 		return "", err
 	}
 
+	// 每个注册用户最近一条到访(DISTINCT ON 取每人最新一行), 让"某用户来过吗"
+	// 这类问题有现成答案, 不依赖模型自己从最近 10 条里推断
+	type lastVisit struct {
+		UserID    uint64    `gorm:"column:user_id"`
+		IP        string    `gorm:"column:ip"`
+		Path      string    `gorm:"column:path"`
+		CreatedAt time.Time `gorm:"column:created_at"`
+	}
+	var lasts []lastVisit
+	if err := s.db.Raw("SELECT DISTINCT ON (user_id) user_id, ip, path, created_at "+
+		"FROM visit_logs WHERE user_id IS NOT NULL ORDER BY user_id, created_at DESC").
+		Scan(&lasts).Error; err != nil {
+		return "", err
+	}
+	lastOf := make(map[uint64]lastVisit, len(lasts))
+	for _, l := range lasts {
+		lastOf[l.UserID] = l
+	}
+
 	var b strings.Builder
 	b.WriteString("【网站实时访问统计】以下是服务器刚从数据库查到的真实数据, 回答访问相关问题必须以此为准, 不要编造:\n")
 	b.WriteString(fmt.Sprintf("- 今日(%s): %d 条记录 / %d 个独立访客 IP\n", now.Format("01-02"), todayCnt, todayIPs))
@@ -245,6 +264,16 @@ func (s *VisitLogService) StatsForAI() (string, error) {
 	}
 	statParts = append(statParts, fmt.Sprintf("匿名 %d/%d", todayAnon, totalAnon))
 	b.WriteString("- 各用户记录数(今日/累计): "+strings.Join(statParts, "; ")+"\n")
+	lastParts := make([]string, 0, len(users))
+	for _, u := range users {
+		if l, ok := lastOf[u.ID]; ok {
+			lastParts = append(lastParts, fmt.Sprintf("%s(#%d) %s @%s %s",
+				u.Username, u.ID, l.CreatedAt.Format("01-02 15:04"), l.IP, l.Path))
+		} else {
+			lastParts = append(lastParts, fmt.Sprintf("%s(#%d) 从未到访", u.Username, u.ID))
+		}
+	}
+	b.WriteString("- 各注册用户最近一条到访: "+strings.Join(lastParts, "; ")+"\n")
 	b.WriteString("- 最近 10 条访问(时间 | IP | 用户 | 路径):\n")
 	for _, v := range recent {
 		user := "匿名"
@@ -268,6 +297,7 @@ func (s *VisitLogService) StatsForAI() (string, error) {
 	}
 	b.WriteString("- 常见 UA Top3: "+strings.Join(uaParts, ", ")+"\n")
 	b.WriteString("说明: 每位访客(IP)每天只记一条; 路径为 .php/.env/wp-login 等非常规页面多为互联网扫描器自动探测, 属正常背景噪音, 不是真实访客.\n")
+	b.WriteString("重要: 回答某用户的访问问题时, 先用上方「用户对照」把用户名换成 #ID, 再引用「各用户记录数」和「各注册用户最近一条到访」作答; 最近 10 条里没出现该用户不代表该用户没有到访记录.\n")
 	return b.String(), nil
 }
 
