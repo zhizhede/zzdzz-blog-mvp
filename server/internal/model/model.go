@@ -117,8 +117,8 @@ type ArticleVersion struct {
 
 func (ArticleVersion) TableName() string { return "article_versions" }
 
-// VisitLog 访问日志(0016): 每位访客(IP)每天至多一条, 由全局中间件 RecordVisit 写入.
-// 追加型流水表: 只增不改, 不复用 Base(无软删/更新时间); UserID 为 nil 表示匿名访客.
+// VisitLog 访问日志(0016): 0018 起无差别记录每个通过噪音过滤的请求, 由全局中间件写入.
+// 追加型流水表: 只增不改, 不复用 Base(无软删/更新时间); UserID 为 nil 表示该请求未登录.
 type VisitLog struct {
 	ID        uint64    `gorm:"primaryKey" json:"id"`
 	IP        string    `gorm:"size:45;not null;index" json:"ip"`

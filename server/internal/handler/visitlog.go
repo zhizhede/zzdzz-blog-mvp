@@ -6,11 +6,11 @@ import (
 	"path"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 
+	"zzdzz-blog/server/internal/model"
 	"zzdzz-blog/server/internal/service"
 	jwtutil "zzdzz-blog/server/pkg/jwt"
 	"zzdzz-blog/server/pkg/response"
@@ -24,7 +24,8 @@ func NewVisitLogHandler(svc *service.VisitLogService) *VisitLogHandler {
 	return &VisitLogHandler{svc: svc}
 }
 
-// RecordVisit 全局访问记录中间件(0016): 每位访客(IP)每天至多一条.
+// RecordVisit 全局访问记录中间件(0016, 0018 起无差别记录):
+// 每个通过噪音过滤的 GET/HEAD 请求各记一条, 归属随请求登录态.
 // 带 Bearer token 且有效时附带 user_id, 否则匿名(NULL).
 // 必须在路由注册之前 r.Use, 否则静态页/NoRoute 请求不经过本中间件.
 func RecordVisit(db *gorm.DB, jwtSecret string) gin.HandlerFunc {
@@ -50,10 +51,8 @@ func RecordVisit(db *gorm.DB, jwtSecret string) gin.HandlerFunc {
 		ua := truncateRunes(c.Request.UserAgent(), 512)
 
 		go func() {
-			// 服务器本地时区即 +08:00, 与 0017 唯一索引的时区钉死一致
-			day := time.Now().Format("2006-01-02")
-			// 当天无记录则插入(并发下撞唯一索引自动放弃); 已有匿名记录且本次带 token 则回填归属
-			if err := svc.AttributeOrRecord(ip, uid, p, ua, day); err != nil {
+			// 无差别记录: 每个请求一条(0018), 归属随本次请求的登录态
+			if err := svc.Record(&model.VisitLog{IP: ip, UserID: uid, Path: p, UserAgent: ua}); err != nil {
 				log.Printf("[visit] 记录访问失败: %v", err)
 			}
 		}()

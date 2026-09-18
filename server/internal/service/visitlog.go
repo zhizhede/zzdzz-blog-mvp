@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"gorm.io/gorm"
-	"gorm.io/gorm/clause"
 
 	"zzdzz-blog/server/internal/model"
 )
@@ -33,30 +32,10 @@ type VisitLogListResult struct {
 	Items []VisitLogRow  `json:"items"`
 }
 
-// AttributeOrRecord 当天归属逻辑(并发安全, 依赖 0017 唯一索引 uq_visit_logs_ip_day):
-//   - 先插入, 撞唯一索引(ip + 上海时区日期)说明当天已有记录, 放弃插入;
-//   - 被去重且本次带 uid: 把当天该 IP 的匿名记录归属给该用户(访客登录后认领当天
-//     记录), 已归属其他用户的记录绝不覆盖.
-//
-// day 为服务器本地时区(+08:00)的 YYYY-MM-DD, 与索引表达式的时区钉死一致.
-func (s *VisitLogService) AttributeOrRecord(ip string, uid *uint64, path, ua, day string) error {
-	err := s.db.Clauses(clause.OnConflict{
-		Columns: []clause.Column{
-			{Name: "ip"},
-			// 冲突目标表达式须与索引定义完全一致, 类型转换整体多包一层括号才是合法语法
-			{Name: "((created_at AT TIME ZONE 'Asia/Shanghai')::date)", Raw: true},
-		},
-		DoNothing: true,
-	}).Create(&model.VisitLog{IP: ip, UserID: uid, Path: path, UserAgent: ua}).Error
-	if err != nil {
-		return err
-	}
-	if uid != nil {
-		return s.db.Model(&model.VisitLog{}).
-			Where("ip = ? AND user_id IS NULL AND (created_at AT TIME ZONE 'Asia/Shanghai')::date = ?", ip, day).
-			Update("user_id", *uid).Error
-	}
-	return nil
+// Record 无差别记录(0018 起不再按 IP+天去重): 每个通过噪音过滤的请求
+// 各记一条, 归属随请求自身的登录态(页面加载为匿名, 登录 API 请求带 user_id).
+func (s *VisitLogService) Record(v *model.VisitLog) error {
+	return s.db.Create(v).Error
 }
 
 // List 分页查询访问记录: ip 精确匹配, path/ua 为包含匹配(ILIKE), 按 created_at 倒序.
@@ -296,7 +275,7 @@ func (s *VisitLogService) StatsForAI() (string, error) {
 		uaParts = append(uaParts, fmt.Sprintf("%s(%d次)", truncateUA(u.UA, 40), u.N))
 	}
 	b.WriteString("- 常见 UA Top3: "+strings.Join(uaParts, ", ")+"\n")
-	b.WriteString("说明: 每位访客(IP)每天只记一条; 路径为 .php/.env/wp-login 等非常规页面多为互联网扫描器自动探测, 属正常背景噪音, 不是真实访客.\n")
+	b.WriteString("说明: 无差别记录每个请求, 同一次浏览会产生多条(页面加载记匿名, 登录后的 API 请求带用户), 条数是请求数不是人数, 真实访客数看独立 IP 数; 路径为 .php/.env/wp-login 等非常规页面多为互联网扫描器自动探测, 属正常背景噪音, 不是真实访客.\n")
 	b.WriteString("重要: 回答某用户的访问问题时, 先用上方「用户对照」把用户名换成 #ID, 再引用「各用户记录数」和「各注册用户最近一条到访」作答; 最近 10 条里没出现该用户不代表该用户没有到访记录.\n")
 	return b.String(), nil
 }
