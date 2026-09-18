@@ -24,10 +24,12 @@ type AIHandler struct {
 	svc *service.AIService
 	// recall AI 回顾服务, 可为 nil(未启用); Enabled() 内部判空
 	recall *service.RecallService
+	// visits 访问日志服务(0016), 为 admin 对话注入实时访问摘要; 可为 nil
+	visits *service.VisitLogService
 }
 
-func NewAIHandler(cfg *config.AIConfig, svc *service.AIService, recall *service.RecallService) *AIHandler {
-	return &AIHandler{cfg: cfg, svc: svc, recall: recall}
+func NewAIHandler(cfg *config.AIConfig, svc *service.AIService, recall *service.RecallService, visits *service.VisitLogService) *AIHandler {
+	return &AIHandler{cfg: cfg, svc: svc, recall: recall, visits: visits}
 }
 
 // -------------------- 会话管理 --------------------
@@ -194,6 +196,21 @@ func (h *AIHandler) SendMessage(c *gin.Context) {
 				{Role: "system", Content: prompt},
 			}, llmMsgs...)
 			recallSources = sources
+		}
+	}
+
+	// 2.6 访问统计注入(0016): 仅 admin 对话注入实时访问摘要, AI 可回答
+	// "今天多少人访问/最近谁来了"类问题; 普通用户不注入(访问数据含 IP, 不外泄).
+	// 查询失败静默降级为普通对话, 不影响主流程.
+	if v, ok := c.Get("is_admin"); ok {
+		if adminFlag, _ := v.(bool); adminFlag && h.visits != nil {
+			if summary, err := h.visits.StatsForAI(); err == nil && summary != "" {
+				llmMsgs = append([]openai.ChatCompletionMessage{
+					{Role: "system", Content: summary},
+				}, llmMsgs...)
+			} else if err != nil {
+				log.Printf("[visit] stats summary for ai failed: %v", err)
+			}
 		}
 	}
 

@@ -115,7 +115,6 @@ func New(db *gorm.DB, cfg *config.Config) (*gin.Engine, error) {
 	tagSvc := service.NewTagService(db)
 	tag := handler.NewTagHandler(tagSvc)
 	aiSvc := service.NewAIService(db)
-
 	// AI 回顾(RAG): embedding 配置齐全才启用; 缺配置或 recall.enabled=false 时
 	// recallSvc 为 nil, 对话自动退化为普通聊天, 不报错(设计见 doc/v0.3-tech-design.md §4).
 	var recallSvc *service.RecallService
@@ -138,7 +137,9 @@ func New(db *gorm.DB, cfg *config.Config) (*gin.Engine, error) {
 			}
 		}
 	}
-	ai := handler.NewAIHandler(&cfg.AI, aiSvc, recallSvc)
+	// 访问日志服务(0016): 查询接口与 AI 访问统计注入共用
+	visitLogSvc := service.NewVisitLogService(db)
+	ai := handler.NewAIHandler(&cfg.AI, aiSvc, recallSvc, visitLogSvc)
 	// AI 写作工作流(compose 单步接口 + 风格卡 + 版本快照), 设计见 doc/v0.4-tech-design.md
 	writingSvc := service.NewWritingService(db, &cfg.AI)
 	writing := handler.NewWritingHandler(&cfg.AI, writingSvc)
@@ -258,7 +259,6 @@ func New(db *gorm.DB, cfg *config.Config) (*gin.Engine, error) {
 		}
 
 		// 访问日志查询(0016): 仅 admin, 数据由全局中间件 RecordVisit 写入
-		visitLogSvc := service.NewVisitLogService(db)
 		visitLogs := api.Group("/visit-logs")
 		visitLogs.Use(chainedAdmin(&cfg.JWT))
 		{
