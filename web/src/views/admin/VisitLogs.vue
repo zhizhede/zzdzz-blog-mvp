@@ -63,7 +63,7 @@ const fmtTime = (iso: string) => new Date(iso).toLocaleString('zh-CN', { hour12:
         <h1 class="display title">访问记录</h1>
         <button class="primary-btn" @click="fetchList">刷新</button>
       </div>
-      <p class="hint">每位访客(IP)每天至多记录一条。用户筛选: 输入「匿名」查匿名访客(含用户名叫"匿名"的注册用户, 结果中 #ID 徽标者为注册用户); 输入 #数字按用户 ID 精确查; 输入其他文本按用户名模糊匹配。</p>
+      <p class="hint">无差别记录每个请求: 页面加载记为匿名, 登录后的 API 请求带用户, 同一次浏览会产生多条。用户筛选: 输入「匿名」查匿名请求(含用户名叫"匿名"的注册用户, 结果中 #ID 徽标者为注册用户); 输入 #数字按用户 ID 精确查; 输入其他文本按用户名模糊匹配。</p>
     </div>
 
     <div class="filter-row">
