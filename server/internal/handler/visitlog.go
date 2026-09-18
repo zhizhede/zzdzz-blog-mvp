@@ -50,10 +50,10 @@ func RecordVisit(db *gorm.DB, jwtSecret string) gin.HandlerFunc {
 		ua := truncateRunes(c.Request.UserAgent(), 512)
 
 		go func() {
-			now := time.Now()
-			midnight := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
-			// 当天无记录则插入; 已有匿名记录且本次带 token 则回填归属
-			if err := svc.AttributeOrRecord(ip, uid, p, ua, midnight); err != nil {
+			// 服务器本地时区即 +08:00, 与 0017 唯一索引的时区钉死一致
+			day := time.Now().Format("2006-01-02")
+			// 当天无记录则插入(并发下撞唯一索引自动放弃); 已有匿名记录且本次带 token 则回填归属
+			if err := svc.AttributeOrRecord(ip, uid, p, ua, day); err != nil {
 				log.Printf("[visit] 记录访问失败: %v", err)
 			}
 		}()

@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 
 	"zzdzz-blog/server/internal/model"
 )
@@ -32,28 +33,29 @@ type VisitLogListResult struct {
 	Items []VisitLogRow  `json:"items"`
 }
 
-// AttributeOrRecord 当天归属逻辑:
-//   - 该 IP 当天已有记录且为匿名(user_id IS NULL): 带 uid 时回填归属(访客登录后
-//     把当天记录认领回来), 已归属其他用户的记录绝不覆盖;
-//   - 当天无记录: 插入新记录(带或不带 uid).
+// AttributeOrRecord 当天归属逻辑(并发安全, 依赖 0017 唯一索引 uq_visit_logs_ip_day):
+//   - 先插入, 撞唯一索引(ip + 上海时区日期)说明当天已有记录, 放弃插入;
+//   - 被去重且本次带 uid: 把当天该 IP 的匿名记录归属给该用户(访客登录后认领当天
+//     记录), 已归属其他用户的记录绝不覆盖.
 //
-// 并发竞态下极小概率重复插入, 无害(0016 迁移注释有述).
-func (s *VisitLogService) AttributeOrRecord(ip string, uid *uint64, path, ua string, dayStart time.Time) error {
-	var anon int64
-	if err := s.db.Model(&model.VisitLog{}).
-		Where("ip = ? AND created_at >= ? AND user_id IS NULL", ip, dayStart).
-		Count(&anon).Error; err != nil {
+// day 为服务器本地时区(+08:00)的 YYYY-MM-DD, 与索引表达式的时区钉死一致.
+func (s *VisitLogService) AttributeOrRecord(ip string, uid *uint64, path, ua, day string) error {
+	err := s.db.Clauses(clause.OnConflict{
+		Columns: []clause.Column{
+			{Name: "ip"},
+			{Name: "(created_at AT TIME ZONE 'Asia/Shanghai')::date", Raw: true},
+		},
+		DoNothing: true,
+	}).Create(&model.VisitLog{IP: ip, UserID: uid, Path: path, UserAgent: ua}).Error
+	if err != nil {
 		return err
 	}
-	if anon > 0 {
-		if uid == nil {
-			return nil
-		}
+	if uid != nil {
 		return s.db.Model(&model.VisitLog{}).
-			Where("ip = ? AND created_at >= ? AND user_id IS NULL", ip, dayStart).
+			Where("ip = ? AND user_id IS NULL AND (created_at AT TIME ZONE 'Asia/Shanghai')::date = ?", ip, day).
 			Update("user_id", *uid).Error
 	}
-	return s.db.Create(&model.VisitLog{IP: ip, UserID: uid, Path: path, UserAgent: ua}).Error
+	return nil
 }
 
 // List 分页查询访问记录: ip 精确匹配, path/ua 为包含匹配(ILIKE), 按 created_at 倒序.
