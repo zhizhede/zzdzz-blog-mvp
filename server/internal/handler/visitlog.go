@@ -110,11 +110,12 @@ func truncateRunes(s string, n int) string {
 	return string(r[:n])
 }
 
-// List admin 分页查询访问记录: GET /api/v1/visit-logs?page=&page_size=&ip=
+// List admin 分页查询访问记录: GET /api/v1/visit-logs?page=&page_size=&ip=&user=&path=&ua=
+// ip 精确匹配; user 支持"匿名"/ "#ID" / 用户名模糊; path/ua 为包含匹配
 func (h *VisitLogHandler) List(c *gin.Context) {
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "20"))
-	result, err := h.svc.List(page, pageSize, c.Query("ip"))
+	result, err := h.svc.List(page, pageSize, c.Query("ip"), c.Query("user"), c.Query("path"), c.Query("ua"))
 	if err != nil {
 		response.ServerError(c, err.Error())
 		return
