@@ -182,16 +182,76 @@ func (s *VisitLogService) StatsForAI() (string, error) {
 		return "", err
 	}
 
+	// 用户 ID→用户名对照(用户少, 全量带出), AI 才能把 "#8" 和 "zzdzz" 对上号
+	type userRow struct {
+		ID       uint64
+		Username string
+	}
+	var users []userRow
+	if err := s.db.Model(&model.User{}).Select("id, username").Order("id").Scan(&users).Error; err != nil {
+		return "", err
+	}
+	nameOf := make(map[uint64]string, len(users))
+	mapParts := make([]string, 0, len(users))
+	for _, u := range users {
+		nameOf[u.ID] = u.Username
+		mapParts = append(mapParts, fmt.Sprintf("#%d=%s", u.ID, u.Username))
+	}
+
+	// 按用户统计(今日/累计), 匿名单独一行
+	type userCnt struct {
+		UserID  *uint64 `gorm:"column:user_id"`
+		N       int64   `gorm:"column:n"`
+	}
+	countByUser := func(todayOnly bool) (map[uint64]int64, int64, error) {
+		q := s.db.Model(&model.VisitLog{}).Select("user_id, COUNT(*) AS n").Group("user_id")
+		if todayOnly {
+			q = q.Where("created_at >= ?", todayStart)
+		}
+		var rows []userCnt
+		if err := q.Scan(&rows).Error; err != nil {
+			return nil, 0, err
+		}
+		m := make(map[uint64]int64, len(rows))
+		var anon int64
+		for _, r := range rows {
+			if r.UserID != nil {
+				m[*r.UserID] = r.N
+			} else {
+				anon = r.N
+			}
+		}
+		return m, anon, nil
+	}
+	todayByUser, todayAnon, err := countByUser(true)
+	if err != nil {
+		return "", err
+	}
+	totalByUser, totalAnon, err := countByUser(false)
+	if err != nil {
+		return "", err
+	}
+
 	var b strings.Builder
 	b.WriteString("【网站实时访问统计】以下是服务器刚从数据库查到的真实数据, 回答访问相关问题必须以此为准, 不要编造:\n")
 	b.WriteString(fmt.Sprintf("- 今日(%s): %d 条记录 / %d 个独立访客 IP\n", now.Format("01-02"), todayCnt, todayIPs))
 	b.WriteString(fmt.Sprintf("- 昨日: %d 条记录 / %d 个独立访客 IP\n", yCnt, yIPs))
 	b.WriteString(fmt.Sprintf("- 累计: %d 条记录 / %d 个独立访客 IP\n", totalCnt, totalIPs))
+	b.WriteString("- 用户对照: "+strings.Join(mapParts, ", ")+"\n")
+	statParts := make([]string, 0, len(users)+1)
+	for _, u := range users {
+		statParts = append(statParts, fmt.Sprintf("%s(#%d) %d/%d", u.Username, u.ID, todayByUser[u.ID], totalByUser[u.ID]))
+	}
+	statParts = append(statParts, fmt.Sprintf("匿名 %d/%d", todayAnon, totalAnon))
+	b.WriteString("- 各用户记录数(今日/累计): "+strings.Join(statParts, "; ")+"\n")
 	b.WriteString("- 最近 10 条访问(时间 | IP | 用户 | 路径):\n")
 	for _, v := range recent {
 		user := "匿名"
 		if v.UserID != nil {
 			user = fmt.Sprintf("#%d", *v.UserID)
+			if name, ok := nameOf[*v.UserID]; ok {
+				user += " " + name
+			}
 		}
 		b.WriteString(fmt.Sprintf("  %s | %s | %s | %s\n",
 			v.CreatedAt.Format("01-02 15:04"), v.IP, user, v.Path))
