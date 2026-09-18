@@ -31,6 +31,7 @@ const routes = [
       { path: 'articles/:id/edit', component: () => import('../views/admin/ArticleEditor.vue') },
       { path: 'categories', component: () => import('../views/admin/CategoryManage.vue') },
       { path: 'users', component: () => import('../views/admin/UserManage.vue') },
+      { path: 'visit-logs', component: () => import('../views/admin/VisitLogs.vue') },
       { path: 'ai', component: () => import('../views/admin/AICenter.vue') },
       { path: 'settings', component: () => import('../views/admin/SiteSettings.vue') },
     ],

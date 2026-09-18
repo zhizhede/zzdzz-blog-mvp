@@ -8,6 +8,7 @@ import {
   ChatDotRound,
   Setting,
   Key,
+  DataLine,
 } from '@element-plus/icons-vue'
 import AppHeader from '../components/AppHeader.vue'
 import IssueTag from '../components/IssueTag.vue'
@@ -51,6 +52,13 @@ const pwdDialog = ref(false)
           >
             <el-icon><User /></el-icon><span>用户</span>
             <em class="mono">acl</em>
+          </button>
+          <button
+            :class="['side-item', active === '/admin/visit-logs' && 'active']"
+            @click="router.push('/admin/visit-logs')"
+          >
+            <el-icon><DataLine /></el-icon><span>访问记录</span>
+            <em class="mono">log</em>
           </button>
           <button
             :class="['side-item', active === '/admin/ai' && 'active']"

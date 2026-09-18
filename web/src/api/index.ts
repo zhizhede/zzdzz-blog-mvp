@@ -96,6 +96,36 @@ export interface Article {
   tag_ids?: number[] | null
 }
 
+export interface VisitLog {
+  id: number
+  ip: string
+  user_id: number | null
+  /** LEFT JOIN users 得到的用户名, 用户已删/不存在时为 null */
+  username: string | null
+  path: string
+  user_agent: string
+  created_at: string
+}
+
+export interface VisitLogListResult {
+  total: number
+  page: number
+  size: number
+  items: VisitLog[]
+}
+
+// 访问日志(0016): 仅 admin, 数据由后端全局中间件写入, 每位访客每天至多一条
+export const visitLogApi = {
+  list: (params: {
+    page?: number
+    page_size?: number
+    ip?: string
+    user?: string
+    path?: string
+    ua?: string
+  }) => http.get<any, ApiResponse<VisitLogListResult>>('/visit-logs', { params }),
+}
+
 export interface ArticleListResult {
   total: number
   page: number
