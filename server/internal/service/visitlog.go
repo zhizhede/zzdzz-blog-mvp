@@ -32,20 +32,28 @@ type VisitLogListResult struct {
 	Items []VisitLogRow  `json:"items"`
 }
 
-// HasVisitSince 该 IP 自 since 起是否已有记录, 当天去重的依据
-func (s *VisitLogService) HasVisitSince(ip string, since time.Time) (bool, error) {
-	var count int64
+// AttributeOrRecord 当天归属逻辑:
+//   - 该 IP 当天已有记录且为匿名(user_id IS NULL): 带 uid 时回填归属(访客登录后
+//     把当天记录认领回来), 已归属其他用户的记录绝不覆盖;
+//   - 当天无记录: 插入新记录(带或不带 uid).
+//
+// 并发竞态下极小概率重复插入, 无害(0016 迁移注释有述).
+func (s *VisitLogService) AttributeOrRecord(ip string, uid *uint64, path, ua string, dayStart time.Time) error {
+	var anon int64
 	if err := s.db.Model(&model.VisitLog{}).
-		Where("ip = ? AND created_at >= ?", ip, since).
-		Count(&count).Error; err != nil {
-		return false, err
+		Where("ip = ? AND created_at >= ? AND user_id IS NULL", ip, dayStart).
+		Count(&anon).Error; err != nil {
+		return err
 	}
-	return count > 0, nil
-}
-
-// Record 插入一条访问记录, 中间件异步调用
-func (s *VisitLogService) Record(v *model.VisitLog) error {
-	return s.db.Create(v).Error
+	if anon > 0 {
+		if uid == nil {
+			return nil
+		}
+		return s.db.Model(&model.VisitLog{}).
+			Where("ip = ? AND created_at >= ? AND user_id IS NULL", ip, dayStart).
+			Update("user_id", *uid).Error
+	}
+	return s.db.Create(&model.VisitLog{IP: ip, UserID: uid, Path: path, UserAgent: ua}).Error
 }
 
 // List 分页查询访问记录: ip 精确匹配, path/ua 为包含匹配(ILIKE), 按 created_at 倒序.

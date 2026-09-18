@@ -11,7 +11,6 @@ import (
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 
-	"zzdzz-blog/server/internal/model"
 	"zzdzz-blog/server/internal/service"
 	jwtutil "zzdzz-blog/server/pkg/jwt"
 	"zzdzz-blog/server/pkg/response"
@@ -53,16 +52,8 @@ func RecordVisit(db *gorm.DB, jwtSecret string) gin.HandlerFunc {
 		go func() {
 			now := time.Now()
 			midnight := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
-			seen, err := svc.HasVisitSince(ip, midnight)
-			if err != nil {
-				log.Printf("[visit] 当天去重查询失败: %v", err)
-				return
-			}
-			if seen {
-				return
-			}
-			v := &model.VisitLog{IP: ip, UserID: uid, Path: p, UserAgent: ua}
-			if err := svc.Record(v); err != nil {
+			// 当天无记录则插入; 已有匿名记录且本次带 token 则回填归属
+			if err := svc.AttributeOrRecord(ip, uid, p, ua, midnight); err != nil {
 				log.Printf("[visit] 记录访问失败: %v", err)
 			}
 		}()
