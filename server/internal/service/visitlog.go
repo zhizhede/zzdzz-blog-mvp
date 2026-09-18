@@ -232,7 +232,7 @@ func (s *VisitLogService) StatsForAI() (string, error) {
 	}
 
 	var b strings.Builder
-	b.WriteString("【网站实时访问统计】以下是服务器刚从数据库查到的真实数据, 回答访问相关问题必须以此为准, 不要编造:\n")
+	b.WriteString("【网站实时访问统计】以下是服务器刚从数据库查到的真实数据, 回答访问相关问题必须以此为准, 不要编造; 本摘要生成于本条消息的处理瞬间, 是最新数据, 若与本会话早前回答中引用的数字或时间冲突, 一律以本摘要为准:\n")
 	b.WriteString(fmt.Sprintf("- 今日(%s): %d 条记录 / %d 个独立访客 IP\n", now.Format("01-02"), todayCnt, todayIPs))
 	b.WriteString(fmt.Sprintf("- 昨日: %d 条记录 / %d 个独立访客 IP\n", yCnt, yIPs))
 	b.WriteString(fmt.Sprintf("- 累计: %d 条记录 / %d 个独立访客 IP\n", totalCnt, totalIPs))
