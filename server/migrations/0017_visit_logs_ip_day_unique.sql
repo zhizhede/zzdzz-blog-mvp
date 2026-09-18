@@ -15,4 +15,4 @@ WHERE a.ip = b.ip
   AND a.id > b.id;
 
 CREATE UNIQUE INDEX IF NOT EXISTS uq_visit_logs_ip_day
-  ON visit_logs (ip, (created_at AT TIME ZONE 'Asia/Shanghai')::date);
+  ON visit_logs (ip, ((created_at AT TIME ZONE 'Asia/Shanghai')::date));
