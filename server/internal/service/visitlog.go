@@ -43,7 +43,8 @@ func (s *VisitLogService) AttributeOrRecord(ip string, uid *uint64, path, ua, da
 	err := s.db.Clauses(clause.OnConflict{
 		Columns: []clause.Column{
 			{Name: "ip"},
-			{Name: "(created_at AT TIME ZONE 'Asia/Shanghai')::date", Raw: true},
+			// 冲突目标表达式须与索引定义完全一致, 类型转换整体多包一层括号才是合法语法
+			{Name: "((created_at AT TIME ZONE 'Asia/Shanghai')::date)", Raw: true},
 		},
 		DoNothing: true,
 	}).Create(&model.VisitLog{IP: ip, UserID: uid, Path: path, UserAgent: ua}).Error
