@@ -145,6 +145,9 @@ func New(db *gorm.DB, cfg *config.Config) (*gin.Engine, error) {
 	writing := handler.NewWritingHandler(&cfg.AI, writingSvc)
 	userSvc := service.NewUserService(db)
 	userH := handler.NewUserHandler(userSvc)
+	// 快捷用语板(0019): 每用户的编辑器常用短语 CRUD
+	qpSvc := service.NewQuickPhraseService(db)
+	qp := handler.NewQuickPhraseHandler(qpSvc)
 
 	api := r.Group("/api/v1")
 	{
@@ -238,6 +241,16 @@ func New(db *gorm.DB, cfg *config.Config) (*gin.Engine, error) {
 			writingGroup.GET("/style-profile", writing.GetStyleProfile)
 			writingGroup.PUT("/style-profile", writing.PutStyleProfile)
 			writingGroup.POST("/style-profile/derive", writing.DeriveStyleProfile)
+		}
+
+		// 快捷用语板(0019): 每用户编辑器常用短语, 严格按 token 用户隔离
+		quickPhrases := api.Group("/quick-phrases")
+		quickPhrases.Use(handler.RequireAuth(&cfg.JWT))
+		{
+			quickPhrases.GET("", qp.List)
+			quickPhrases.POST("", qp.Create)
+			quickPhrases.PUT("/:id", qp.Update)
+			quickPhrases.DELETE("/:id", qp.Delete)
 		}
 
 		users := api.Group("/users")

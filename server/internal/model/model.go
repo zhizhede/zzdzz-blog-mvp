@@ -129,3 +129,14 @@ type VisitLog struct {
 }
 
 func (VisitLog) TableName() string { return "visit_logs" }
+
+// QuickPhrase 快捷用语板(0019): 用户自预设的常用语句, 编辑器一键插入正文光标处.
+// 严格按用户隔离: 所有读写在 service 层强制带 user_id 条件, 跨用户 id 一律按不存在处理.
+type QuickPhrase struct {
+	Base
+	UserID    uint64 `gorm:"index;not null" json:"user_id"`
+	Content   string `gorm:"size:200;not null" json:"content"`
+	SortOrder int    `gorm:"not null;default:0" json:"sort_order"`
+}
+
+func (QuickPhrase) TableName() string { return "quick_phrases" }
