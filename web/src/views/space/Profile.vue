@@ -5,6 +5,7 @@ import { useUserStore } from '../../stores/user'
 import IssueTag from '../../components/IssueTag.vue'
 import ChangePasswordDialog from '../../components/ChangePasswordDialog.vue'
 import ChangeHintDialog from '../../components/ChangeHintDialog.vue'
+import QuickPhraseManager from '../../components/QuickPhraseManager.vue'
 
 const userStore = useUserStore()
 
@@ -92,6 +93,14 @@ onMounted(() => {
           <li><span class="mono dot">●</span> 自己账号需输入当前密码</li>
           <li><span class="mono dot">●</span> 密码提示忘记密码时可按用户名公开查看, 请勿写入密码本身</li>
         </ul>
+      </section>
+
+      <section class="card card-wide">
+        <p class="mono card-tag">QUICK PHRASES</p>
+        <p class="card-desc">
+          快捷用语板:写笔记/文章时点击板上的语句,即可插入正文光标处;仅自己可见可用。
+        </p>
+        <QuickPhraseManager />
       </section>
     </div>
 
@@ -185,4 +194,6 @@ onMounted(() => {
 .primary-btn:disabled { background: var(--ink-faint); cursor: not-allowed; }
 
 @media (max-width: 760px) { .grid { grid-template-columns: 1fr; } }
+.card-wide { grid-column: 1 / -1; }
+.card-desc { color: var(--ink-mute); font-size: 15px; margin: 0; }
 </style>

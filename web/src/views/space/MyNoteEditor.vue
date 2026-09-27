@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
 import { onBeforeRouteLeave, useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { articleApi, categoryApi, tagApi, writingApi, type Article, type Tag } from '../../api'
 import IssueTag from '../../components/IssueTag.vue'
 import WritingPanel from '../../components/WritingPanel.vue'
+import QuickPhraseBar from '../../components/QuickPhraseBar.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -179,6 +180,20 @@ function onContentInput() {
   updateSelCount()
 }
 
+// 快捷用语: 插入正文光标处(有选区则替换), 插入后焦点与光标回到编辑器
+function insertPhrase(text: string) {
+  const el = contentEl.value
+  if (!el) return
+  const s = el.selectionStart ?? form.value.content.length
+  const e = el.selectionEnd ?? s
+  form.value.content = form.value.content.slice(0, s) + text + form.value.content.slice(e)
+  nextTick(() => {
+    el.focus()
+    el.setSelectionRange(s + text.length, s + text.length)
+  })
+  onContentInput()
+}
+
 async function handleSave() {
   if (!form.value.title.trim() || !form.value.content.trim() || !form.value.category_id) {
     ElMessage.warning('请填写标题、正文、分类')
@@ -287,11 +302,13 @@ const statusText = computed(() => {
           </div>
         </div>
 
-        <label class="field">
-          <span class="mono label label-row">
+        <!-- 用 div 而非 label: label 会关联到快捷条的第一个按钮而非 textarea, 点击字段空白处会误触插入 -->
+        <div class="field">
+          <span class="mono label label-row" @click="contentEl?.focus()">
             CONTENT · MARKDOWN
             <em v-if="selCount > 0" class="sel-count">已选 {{ selCount }} 字</em>
           </span>
+          <QuickPhraseBar @insert="insertPhrase" />
           <textarea
             ref="contentEl"
             v-model="form.content"
@@ -303,7 +320,7 @@ const statusText = computed(() => {
             @mouseup="updateSelCount"
             @blur="selCount = 0"
           />
-        </label>
+        </div>
 
         <div class="actions">
           <button class="text-btn" @click="aiPanelOpen = true">AI 写作</button>

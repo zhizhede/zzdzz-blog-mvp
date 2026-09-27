@@ -48,6 +48,9 @@ export { aiApi } from './ai'
 
 export * from './writing'
 
+export * from './quickPhrase'
+export { quickPhraseApi } from './quickPhrase'
+
 export * from './user'
 export { userApi } from './user'
 
