@@ -46,12 +46,25 @@ rm -rf /www/wwwroot/blog-ui/dist && mkdir -p /www/wwwroot/blog-ui/dist && tar xz
 mkdir -p $DIR/data/icon
 chown -R www:www $DIR /www/wwwroot/blog-ui
 
-PID=$(ps -ef | grep '\./blog-server' | grep -v grep | awk '{print $2}' | head -1)
-[ -n "$PID" ] && kill "$PID" && sleep 2
+# 杀旧进程必须精确匹配进程名(comm=blog-server):
+# 老写法 grep '\./blog-server' 会先命中 setsid/nohup 的 sh -c 包装进程,
+# 真服务进程(脱离会话)杀不掉 → 新进程 8080 被占起不来, 脚本却因 ps 还能看到进程而误报成功.
+pkill -x -u www blog-server || true
+# 等 8080 释放, 最多 10 秒
+for i in 1 2 3 4 5 6 7 8 9 10; do
+  ss -tln 2>/dev/null | grep -q ':8080 ' || break
+  sleep 1
+done
 cd $DIR
 nohup su -s /bin/sh www -c 'cd /www/wwwroot/blog-server && exec ./blog-server' </dev/null >>/www/wwwroot/blog-server/blog.log 2>&1 &
 sleep 3
-ps -ef | grep '\./blog-server' | grep -v grep || { echo "!! 后端进程未启动, 查看 blog.log"; exit 1; }
+pgrep -x blog-server >/dev/null || { echo "!! 后端进程未启动, 查看 blog.log"; exit 1; }
+# 防呆: 进程必须比二进制"新"(启动时间晚于文件 mtime), 否则是旧进程没死、新进程没起来
+BPID=$(pgrep -x blog-server | head -1)
+if [ "$(stat -c %Y /proc/$BPID)" -lt "$(stat -c %Y $DIR/blog-server)" ]; then
+  echo "!! 运行中的仍是旧二进制(进程未重启), 请检查 8080 端口占用"
+  exit 1
+fi
 REMOTE
 
 echo "==> [5/5] 健康检查"
