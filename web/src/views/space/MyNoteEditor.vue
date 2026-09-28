@@ -1,11 +1,13 @@
 <script setup lang="ts">
-import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { onBeforeRouteLeave, useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { articleApi, categoryApi, tagApi, writingApi, type Article, type Tag } from '../../api'
 import IssueTag from '../../components/IssueTag.vue'
 import WritingPanel from '../../components/WritingPanel.vue'
 import QuickPhraseBar from '../../components/QuickPhraseBar.vue'
+import FindReplaceBar from '../../components/FindReplaceBar.vue'
+import { buildHighlightHtml, countMatches } from '../../utils/findReplace'
 
 const route = useRoute()
 const router = useRouter()
@@ -200,6 +202,49 @@ function insertPhrase(text: string) {
   onContentInput()
 }
 
+// -------------------- 查找替换 --------------------
+// 高亮 overlay 垫在透明 textarea 之下渲染命中色块; 全部替换复用同一套视口稳定策略。
+const findOpen = ref(false)
+const findQuery = ref('')
+const hlEl = ref<HTMLDivElement | null>(null)
+const highlightHtml = computed(() => buildHighlightHtml(form.value.content, findQuery.value))
+
+function toggleFind() {
+  findOpen.value = !findOpen.value
+  if (!findOpen.value) findQuery.value = '' // 收起即清高亮
+}
+
+// overlay 宽度取 textarea 的 clientWidth(扣除滚动条), 保证两侧换行位置一致; 滚动随 textarea 同步
+function syncHl() {
+  const el = contentEl.value
+  const hl = hlEl.value
+  if (!el || !hl) return
+  hl.style.width = el.clientWidth + 'px'
+  hl.scrollTop = el.scrollTop
+}
+watch([findQuery, () => form.value.content], () => nextTick(syncHl))
+
+function onFindReplaceAll(search: string, replace: string) {
+  const el = contentEl.value
+  if (!el || !search) return
+  const n = countMatches(form.value.content, search)
+  if (!n) {
+    ElMessage.info('没有匹配内容')
+    return
+  }
+  const pageY = window.scrollY
+  const elTop = el.scrollTop
+  // split/join 做字面量全量替换, 搜索词与替换词都不经正则、不解释 $ 转义
+  form.value.content = form.value.content.split(search).join(replace)
+  nextTick(() => {
+    el.focus({ preventScroll: true })
+    el.scrollTop = elTop
+    window.scrollTo(0, pageY)
+  })
+  onContentInput()
+  ElMessage.success(`已替换 ${n} 处`)
+}
+
 async function handleSave() {
   if (!form.value.title.trim() || !form.value.content.trim() || !form.value.category_id) {
     ElMessage.warning('请填写标题、正文、分类')
@@ -312,20 +357,43 @@ const statusText = computed(() => {
         <div class="field">
           <span class="mono label label-row" @click="contentEl?.focus()">
             CONTENT · MARKDOWN
-            <em v-if="selCount > 0" class="sel-count">已选 {{ selCount }} 字</em>
+            <span class="label-right">
+              <em v-if="selCount > 0" class="sel-count">已选 {{ selCount }} 字</em>
+              <button type="button" class="find-toggle" @click.stop="toggleFind">
+                {{ findOpen ? '收起查找' : '查找替换' }}
+              </button>
+            </span>
           </span>
-          <QuickPhraseBar @insert="insertPhrase" />
-          <textarea
-            ref="contentEl"
-            v-model="form.content"
-            class="input mono-area"
-            rows="18"
-            @input="onContentInput"
-            @select="updateSelCount"
-            @keyup="updateSelCount"
-            @mouseup="updateSelCount"
-            @blur="selCount = 0"
+          <FindReplaceBar
+            v-if="findOpen"
+            :text="form.content"
+            @update:query="findQuery = $event"
+            @replace-all="onFindReplaceAll"
+            @close="findOpen = false"
           />
+          <QuickPhraseBar @insert="insertPhrase" />
+          <!-- 高亮 overlay 垫在透明 textarea 之下, 只渲染色块; 宽度/滚动由 JS 对齐 -->
+          <div class="content-wrap">
+            <div
+              v-if="findQuery"
+              ref="hlEl"
+              class="input mono-area hl-layer"
+              aria-hidden="true"
+              v-html="highlightHtml"
+            ></div>
+            <textarea
+              ref="contentEl"
+              v-model="form.content"
+              class="input mono-area"
+              rows="18"
+              @input="onContentInput"
+              @select="updateSelCount"
+              @keyup="updateSelCount"
+              @mouseup="updateSelCount"
+              @blur="selCount = 0"
+              @scroll="syncHl"
+            />
+          </div>
         </div>
 
         <div class="actions">
@@ -382,13 +450,45 @@ const statusText = computed(() => {
 .title-input { font-size: 27.5px; font-family: var(--font-display); font-weight: 500; }
 .mono-area { font-family: var(--font-mono); font-size: 16.25px; line-height: 1.7; }
 .label-row { display: flex; align-items: baseline; }
+.label-right { margin-left: auto; display: inline-flex; align-items: baseline; gap: 10px; }
 .sel-count {
-  margin-left: auto;
   color: var(--accent);
   font-style: normal;
   text-transform: none;
   letter-spacing: 0.04em;
 }
+.find-toggle {
+  background: transparent;
+  border: 0;
+  padding: 0;
+  font-family: var(--font-mono);
+  font-size: 13.75px;
+  color: var(--ink-mute);
+  cursor: pointer;
+  text-transform: none;
+  letter-spacing: 0.04em;
+}
+.find-toggle:hover { color: var(--accent); }
+.content-wrap { position: relative; }
+/* 高亮 overlay: 与 textarea 同排版, 文字透明只留 <mark> 色块, 交互全部穿透给 textarea.
+   white-space 必须显式 pre-wrap(div 不会像 textarea 那样原生保留换行);
+   上下都钉住才有固定高度, overflow hidden 下 scrollTop 才可同步. */
+.hl-layer {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  overflow: hidden;
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
+  pointer-events: none;
+  color: transparent;
+  border: 0;
+  z-index: 0;
+}
+.hl-layer :deep(mark) { background: var(--accent-soft); color: transparent; }
+.content-wrap textarea { position: relative; z-index: 1; }
 .row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
 .vis-row { display: flex; gap: 6px; }
 .vis-btn {
