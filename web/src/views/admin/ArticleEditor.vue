@@ -195,16 +195,22 @@ function onContentInput() {
   updateSelCount()
 }
 
-// 快捷用语: 插入正文光标处(有选区则替换), 插入后焦点与光标回到编辑器
+// 快捷用语: 插入正文光标处(有选区则替换), 插入后焦点与光标回到编辑器。
+// focus/setSelectionRange 会让浏览器把页面与编辑器内部滚动条滚到光标处(视口跳走),
+// 故先记录两层滚动位置, 插入后原样恢复, 保证视口停在用户原位。
 function insertPhrase(text: string) {
   const el = contentEl.value
   if (!el) return
+  const pageY = window.scrollY
+  const elTop = el.scrollTop
   const s = el.selectionStart ?? form.value.content.length
   const e = el.selectionEnd ?? s
   form.value.content = form.value.content.slice(0, s) + text + form.value.content.slice(e)
   nextTick(() => {
-    el.focus()
+    el.focus({ preventScroll: true })
     el.setSelectionRange(s + text.length, s + text.length)
+    el.scrollTop = elTop
+    window.scrollTo(0, pageY)
   })
   onContentInput()
 }
