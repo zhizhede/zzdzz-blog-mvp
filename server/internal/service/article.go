@@ -182,15 +182,28 @@ func (s *ArticleService) getInternal(id uint64, includeNonPublic bool, owner *ui
 		return nil, err
 	}
 	// 作者自己: 全部可见性都返回
-	if owner != nil && a.AuthorID != nil && *a.AuthorID == *owner {
-		// 走 includeNonPublic=true 的逻辑(已经放行)
-	} else if !includeNonPublic && a.Visibility != "public" {
-		// 公开访客读 private/draft -> 当作不存在(404), 不暴露存在性
+	// 其余情况: 非 public 仅 admin 范围读放行; 带 owner 但非作者一律 404(修 IDOR:
+	// 旧逻辑在 includeNonPublic=true 时非作者也放行, 任何注册账号可读他人 private/draft)
+	if !canView(&a, includeNonPublic, owner) {
+		// 当作不存在(404), 不暴露存在性
 		return nil, ErrArticleNotFound
 	}
 	s.db.Model(&a).UpdateColumn("view_count", gorm.Expr("view_count + 1"))
 	a.ViewCount++
 	return &a, nil
+}
+
+// canView 可见性判定: public 所有人可读;
+// 非 public 仅当 admin 范围读(owner==nil 且 includeNonPublic, 即 GetForOwner 之外的 admin 路径)
+// 或请求者正是文章作者(owner 非 nil 且匹配)时可读.
+func canView(a *model.Article, includeNonPublic bool, owner *uint64) bool {
+	if a.Visibility == "public" {
+		return true
+	}
+	if owner == nil {
+		return includeNonPublic
+	}
+	return a.AuthorID != nil && *a.AuthorID == *owner
 }
 
 type ArticleInput struct {
