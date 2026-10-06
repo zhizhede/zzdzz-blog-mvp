@@ -155,11 +155,12 @@ func New(db *gorm.DB, cfg *config.Config) (*gin.Engine, error) {
 
 		authGroup := api.Group("/auth")
 		{
-			authGroup.POST("/login", auth.Login)
+			// 按 IP 限流: 挡口令爆破与注册刷号(429), 各路由独立计数
+			authGroup.POST("/login", handler.RateLimit(10, time.Minute), auth.Login)
 			// 开放注册(0013): 游客输用户名(可重名)+ 密码即可注册, 成功即返回 token
-			authGroup.POST("/register", auth.Register)
+			authGroup.POST("/register", handler.RateLimit(5, time.Minute), auth.Register)
 			// 密码提示查询(0015): 公开接口, 忘记密码时按用户名查看注册时留的提示
-			authGroup.POST("/password-hint", auth.PasswordHint)
+			authGroup.POST("/password-hint", handler.RateLimit(10, time.Minute), auth.PasswordHint)
 
 			protected := authGroup.Group("")
 			protected.Use(handler.RequireAuth(&cfg.JWT))
